@@ -10,6 +10,7 @@
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![Types](https://img.shields.io/badge/types-mypy-2a6db2)
 ![License](https://img.shields.io/badge/license-MIT-green)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 This project reimagines the classic ["LSTM Model for Time Series, with Code"](https://towardsdatascience.com/) scalecast walkthrough as a **custom PyTorch system** you can actually ship: a clean library, a REST API, and a dashboard — all Dockerized, tested, and documented.
 
@@ -35,6 +36,19 @@ It keeps the article's five capabilities and upgrades each one:
 - 📊 **Honest benchmarking** — every run is scored against Naive / Drift / Seasonal-Naive / ARIMA / ETS baselines on a held-out test set, so "it beats the baselines" is *measured*, not asserted.
 
 > ⚠️ **Not financial advice.** This is a research/engineering framework. Forecasts are uncertain; markets are not guaranteed to be predictable. See the [model card](docs/model_card.md).
+
+---
+
+## Contents
+
+- [Architecture](#architecture)
+- [Results — measured, not asserted](#results--measured-not-asserted)
+- [Install](#install)
+- [Quickstart (Python)](#quickstart-python)
+- [CLI](#cli) · [REST API](#rest-api) · [Dashboard](#dashboard) · [Docker](#docker)
+- [How it works (the ML edge)](#how-it-works-the-ml-edge)
+- [Configuration](#configuration) · [Project structure](#project-structure)
+- [Development](#development) · [Contributing](#contributing) · [License](#license)
 
 ---
 
@@ -265,6 +279,17 @@ ruff check . && mypy src && pytest      # lint, type-check, test (Claude calls a
 
 Tests run offline with no API key (synthetic data, NumPy RAG fallback, mocked Claude).
 
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the dev setup, the
+quality gate (ruff + mypy + pytest), and conventions (causal/leakage-safe transforms,
+framework-agnostic core, AI always optional, honest benchmarking). Good first issues:
+new transforms, baselines, data loaders, or additional finance features.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+<sub>Built as a production-grade reimagining of the scalecast "LSTM for Time Series" walkthrough — custom PyTorch core, retrieval-augmented forecasting, and a Claude AI layer. Forecasts are uncertain and not financial advice.</sub>
