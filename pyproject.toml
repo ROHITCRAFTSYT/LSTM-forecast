@@ -75,10 +75,10 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/lstm-forecast"
-Documentation = "https://github.com/your-org/lstm-forecast#readme"
-Repository = "https://github.com/your-org/lstm-forecast"
-Issues = "https://github.com/your-org/lstm-forecast/issues"
+Homepage = "https://github.com/ROHITCRAFTSYT/lstm-forecast"
+Documentation = "https://github.com/ROHITCRAFTSYT/lstm-forecast#readme"
+Repository = "https://github.com/ROHITCRAFTSYT/lstm-forecast"
+Issues = "https://github.com/ROHITCRAFTSYT/lstm-forecast/issues"
 
 [project.scripts]
 lstm-forecast = "lstm_forecast.cli:main"

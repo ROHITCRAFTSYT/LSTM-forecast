@@ -2,7 +2,7 @@
 
 **Production-grade LSTM time-series forecasting for finance — enhanced with retrieval-augmented forecasting (RAG), Claude-powered insights, and rigorous probabilistic intervals.**
 
-[![CI](https://github.com/your-org/lstm-forecast/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/lstm-forecast/actions/workflows/ci.yml)
+[![CI](https://github.com/ROHITCRAFTSYT/lstm-forecast/actions/workflows/ci.yml/badge.svg)](https://github.com/ROHITCRAFTSYT/lstm-forecast/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
