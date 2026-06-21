@@ -3,10 +3,20 @@
 **Production-grade LSTM time-series forecasting for finance — enhanced with retrieval-augmented forecasting (RAG), Claude-powered insights, and rigorous probabilistic intervals.**
 
 [![CI](https://github.com/ROHITCRAFTSYT/lstm-forecast/actions/workflows/ci.yml/badge.svg)](https://github.com/ROHITCRAFTSYT/lstm-forecast/actions/workflows/ci.yml)
+[![Docs](https://github.com/ROHITCRAFTSYT/lstm-forecast/actions/workflows/docs.yml/badge.svg)](https://github.com/ROHITCRAFTSYT/lstm-forecast/actions/workflows/docs.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c)
+![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen)
+![Lint](https://img.shields.io/badge/lint-ruff-261230)
+![Types](https://img.shields.io/badge/types-mypy-2a6db2)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 This project reimagines the classic ["LSTM Model for Time Series, with Code"](https://towardsdatascience.com/) scalecast walkthrough as a **custom PyTorch system** you can actually ship: a clean library, a REST API, and a dashboard — all Dockerized, tested, and documented.
+
+<p align="center">
+  <img src="assets/forecast_example.png" alt="LSTM forecast with conformal prediction intervals and the test-set forecast tracking the actual series" width="92%">
+</p>
+<p align="center"><em>Forecast with a 90% conformal interval; the dashed line is the held-out test forecast tracking reality. Regenerate with <code>python scripts/make_readme_assets.py</code>.</em></p>
 
 It keeps the article's five capabilities and upgrades each one:
 
@@ -30,15 +40,31 @@ It keeps the article's five capabilities and upgrades each one:
 
 ## Architecture
 
-```
-data ingest → feature engineering → reversible transform pipeline
-     → [RAG analog retrieval] ⟶ feature fusion ⟶ PyTorch LSTM(+attention, quantile/conformal head)
-     → backtest / conformal intervals → benchmark vs baselines
-     → Claude: insights · chat (RAG over docs+results) · tuning suggestions
-Surfaces:  Python API   ·   FastAPI service   ·   Streamlit dashboard      (all Dockerized)
-```
+<p align="center">
+  <img src="assets/architecture.svg" alt="Architecture: data → features → transforms → RAG retrieval → LSTM+attention → intervals/benchmark/Claude → library/API/dashboard surfaces" width="96%">
+</p>
 
-A clean **core library** (`src/lstm_forecast`) is consumed by the API and dashboard — no business logic lives in the serving layers.
+A clean **core library** (`src/lstm_forecast`) is consumed by the API and dashboard — no business logic lives in the serving layers. See [docs/architecture.md](docs/architecture.md) for the design decisions (delta-mode targets, leakage-safe positional inversion, the two-model evaluation flow, RAG conditioning).
+
+---
+
+## Results — measured, not asserted
+
+On a demo series **with genuine structure** (trend + seasonality + autocorrelation), the LSTM clearly beats every baseline. The same harness scores the model on *your* data, so you always see whether it actually wins:
+
+<p align="center">
+  <img src="assets/benchmark_example.png" alt="Test-set RMSE bar chart: the LSTM beats naive, drift, seasonal-naive, ARIMA and ETS" width="70%">
+</p>
+
+| model | RMSE | MAE | MASE | R² |
+| --- | ---: | ---: | ---: | ---: |
+| **lstm** | **1.02** | **0.89** | **0.33** | **0.95** |
+| ets / drift | 5.38 | 4.47 | 1.64 | −0.35 |
+| naive | 5.81 | 4.70 | 1.72 | −0.58 |
+| seasonal_naive | 7.33 | 6.07 | 2.23 | −1.51 |
+| arima | 7.41 | 6.12 | 2.25 | −1.56 |
+
+> **The honest caveat:** on a *near-random-walk* series (e.g. raw daily stock prices) naive is close to optimal and a tie is a good result — markets are hard. This framework is built to *measure* that per-series rather than overclaim. See the [model card](docs/model_card.md).
 
 ---
 
@@ -187,6 +213,45 @@ Pass `ANTHROPIC_API_KEY` via your shell or a `.env` file (see `.env.example`).
 6. **LLM-assisted tuning** — Claude proposes a structured candidate grid; cross-validation picks the winner.
 
 See [`docs/architecture.md`](docs/architecture.md) for details and [`docs/model_card.md`](docs/model_card.md) for scope, limitations and the no-advice disclaimer.
+
+---
+
+## Configuration
+
+All settings are optional and read from the environment (prefix `LSTM_FORECAST_`, nested with `__`) or a `.env` file (see [`.env.example`](.env.example)). **Nothing here is required** — the forecasting core and RAG retrieval run with zero configuration.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Enables Claude insights / chat / tuning. Empty → graceful template fallbacks. |
+| `LSTM_FORECAST_AI__MODEL` | `claude-opus-4-8` | Claude model id for the AI layer. |
+| `LSTM_FORECAST_AI__EFFORT` | `high` | Reasoning effort: `low \| medium \| high \| max`. |
+| `LSTM_FORECAST_DEVICE` | `auto` | torch device: `auto \| cpu \| cuda \| mps`. |
+| `LSTM_FORECAST_SEED` | `20` | Global RNG seed (Python / NumPy / torch). |
+| `LSTM_FORECAST_CACHE_DIR` | `.cache` | Where data downloads & artifacts are cached. |
+| `LSTM_FORECAST_API__PORT` | `8000` | API port. |
+| `LSTM_FORECAST_API__CORS_ORIGINS` | `*` | Comma-separated CORS origins. |
+
+---
+
+## Project structure
+
+```
+src/lstm_forecast/
+├── data/          # loaders (yfinance/CSV/synthetic) + causal finance features
+├── transforms/    # reversible, leakage-safe transforms (Detrend/Deseason/Scale/…)
+├── models/        # windowing, LSTM(+attention), point/quantile heads, Trainer
+├── forecasting/   # Forecaster (public API), baselines, conformal, backtest
+├── rag/           # window embedder, vector AnalogStore, AnalogRetriever
+├── ai/            # Claude client, insights, structured tuner, doc index, chat assistant
+├── evaluation/    # point / interval / probabilistic metrics
+├── api/           # FastAPI service (schemas, service layer, routers)
+├── pipelines.py   # Transform → Forecast → Revert composer
+├── config.py      # pydantic-settings configuration
+└── cli.py         # `lstm-forecast` command-line interface
+dashboard/         # Streamlit app          docker/      # API + dashboard images
+examples/          # 6 runnable demos        docs/        # mkdocs site + model card
+tests/             # 55 tests (offline)      scripts/     # README asset generation
+```
 
 ---
 

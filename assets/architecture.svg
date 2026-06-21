@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#5b6b7b"/>
+    </marker>
+    <style>
+      .box { fill:#ffffff; stroke:#1f4e79; stroke-width:1.6; rx:8; }
+      .rag { fill:#fdf3ec; stroke:#e67e22; stroke-width:1.6; }
+      .ai  { fill:#f3eef9; stroke:#7d5ba6; stroke-width:1.6; }
+      .core{ fill:#eaf1f8; stroke:#1f4e79; stroke-width:1.8; }
+      .surf{ fill:#eafaf1; stroke:#1e8449; stroke-width:1.6; }
+      .t   { fill:#1f2d3d; font-size:13px; font-weight:600; }
+      .s   { fill:#5b6b7b; font-size:11px; }
+      .h   { fill:#34495e; font-size:12px; font-weight:700; letter-spacing:.5px;}
+      .edge{ stroke:#5b6b7b; stroke-width:1.6; fill:none; }
+    </style>
+  </defs>
+
+  <text x="20" y="28" class="h">PIPELINE</text>
+
+  <!-- Row 1: data -> features -> transforms -->
+  <rect class="box" x="20"  y="44" width="150" height="58" rx="8"/>
+  <text x="95" y="70" class="t" text-anchor="middle">Data ingest</text>
+  <text x="95" y="88" class="s" text-anchor="middle">yfinance · CSV · synthetic</text>
+
+  <rect class="box" x="200" y="44" width="160" height="58" rx="8"/>
+  <text x="280" y="70" class="t" text-anchor="middle">Feature engineering</text>
+  <text x="280" y="88" class="s" text-anchor="middle">RSI · MACD · vol · Fourier</text>
+
+  <rect class="box" x="390" y="44" width="170" height="58" rx="8"/>
+  <text x="475" y="70" class="t" text-anchor="middle">Reversible transforms</text>
+  <text x="475" y="88" class="s" text-anchor="middle">detrend · deseason · scale</text>
+
+  <line class="edge" x1="170" y1="73" x2="200" y2="73" marker-end="url(#arrow)"/>
+  <line class="edge" x1="360" y1="73" x2="390" y2="73" marker-end="url(#arrow)"/>
+
+  <!-- RAG -->
+  <rect class="rag" x="590" y="44" width="160" height="58" rx="8"/>
+  <text x="670" y="68" class="t" text-anchor="middle">RAG retrieval</text>
+  <text x="670" y="86" class="s" text-anchor="middle">analog k-NN windows</text>
+  <line class="edge" x1="560" y1="73" x2="590" y2="73" marker-end="url(#arrow)"/>
+
+  <!-- Core model -->
+  <rect class="core" x="300" y="150" width="360" height="70" rx="10"/>
+  <text x="480" y="178" class="t" text-anchor="middle">PyTorch LSTM  +  Attention</text>
+  <text x="480" y="198" class="s" text-anchor="middle">direct multi-horizon · quantile / conformal head · delta targets</text>
+  <line class="edge" x1="670" y1="102" x2="540" y2="150" marker-end="url(#arrow)"/>
+  <line class="edge" x1="475" y1="102" x2="475" y2="150" marker-end="url(#arrow)"/>
+
+  <!-- Row 3: intervals/baselines -->
+  <rect class="box" x="120" y="262" width="200" height="62" rx="8"/>
+  <text x="220" y="288" class="t" text-anchor="middle">Intervals</text>
+  <text x="220" y="306" class="s" text-anchor="middle">conformal · backtest dynamic</text>
+
+  <rect class="box" x="360" y="262" width="200" height="62" rx="8"/>
+  <text x="460" y="288" class="t" text-anchor="middle">Benchmark</text>
+  <text x="460" y="306" class="s" text-anchor="middle">naive · drift · ARIMA · ETS</text>
+
+  <!-- AI -->
+  <rect class="ai" x="600" y="262" width="240" height="62" rx="8"/>
+  <text x="720" y="284" class="t" text-anchor="middle">Claude AI (optional)</text>
+  <text x="720" y="302" class="s" text-anchor="middle">insights · RAG chat · tuning</text>
+
+  <line class="edge" x1="400" y1="220" x2="250" y2="262" marker-end="url(#arrow)"/>
+  <line class="edge" x1="480" y1="220" x2="470" y2="262" marker-end="url(#arrow)"/>
+  <line class="edge" x1="560" y1="220" x2="700" y2="262" marker-end="url(#arrow)"/>
+
+  <!-- Surfaces -->
+  <text x="20" y="378" class="h">SURFACES</text>
+  <rect class="surf" x="120" y="392" width="200" height="50" rx="8"/>
+  <text x="220" y="422" class="t" text-anchor="middle">Python library</text>
+  <rect class="surf" x="360" y="392" width="200" height="50" rx="8"/>
+  <text x="460" y="422" class="t" text-anchor="middle">FastAPI service</text>
+  <rect class="surf" x="600" y="392" width="240" height="50" rx="8"/>
+  <text x="720" y="422" class="t" text-anchor="middle">Streamlit dashboard</text>
+
+  <line class="edge" x1="220" y1="324" x2="220" y2="392" marker-end="url(#arrow)"/>
+  <line class="edge" x1="460" y1="324" x2="460" y2="392" marker-end="url(#arrow)"/>
+  <line class="edge" x1="720" y1="324" x2="720" y2="392" marker-end="url(#arrow)"/>
+
+  <text x="940" y="462" class="s" text-anchor="end">All Dockerized · runs offline without API keys</text>
+</svg>
