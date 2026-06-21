@@ -51,8 +51,12 @@ dependencies = [
 data = ["yfinance>=0.2.40", "pandas-datareader>=0.10"]
 # Retrieval-augmented forecasting vector index.
 rag = ["faiss-cpu>=1.7.4"]
-# Claude-powered insights, tuning and chat assistant.
+# LLM-powered insights, tuning and chat assistant (default provider: Anthropic/Claude).
 ai = ["anthropic>=0.40"]
+# Additional LLM providers (the AI layer is provider-agnostic).
+ai-openai = ["openai>=1.40"]          # also covers Ollama + any OpenAI-compatible endpoint
+ai-google = ["google-generativeai>=0.7"]
+ai-all = ["anthropic>=0.40", "openai>=1.40", "google-generativeai>=0.7"]
 # REST API service.
 api = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "httpx>=0.26"]
 # Streamlit dashboard.
@@ -71,7 +75,7 @@ dev = [
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.24"]
 # Everything (convenience for local development).
 all = [
-    "lstm-forecast[data,rag,ai,api,dashboard,dev,docs]",
+    "lstm-forecast[data,rag,ai,ai-openai,ai-google,api,dashboard,dev,docs]",
 ]
 
 [project.urls]

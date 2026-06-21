@@ -89,4 +89,5 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     ai_enabled: bool
+    ai_provider: str
     device: str

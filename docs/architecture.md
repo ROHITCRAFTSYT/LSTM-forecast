@@ -55,8 +55,17 @@ timestep, the retriever summarises *what followed* the k most similar historical
 into two extra channels (expected move + analog dispersion), concatenated to the model
 input. Self-matches are dropped to avoid trivial leakage.
 
-### Claude integration
-A single client (`ai/client.py`) centralises the model id (`claude-opus-4-8`), adaptive
-thinking, effort, streaming, structured `messages.parse`, and a tool-use loop. Every caller
-checks `client.available` and falls back to deterministic behaviour when no key is set, so
-the system is never blocked on the LLM.
+### Provider-agnostic AI integration
+A single client (`ai/client.py`) wraps a pluggable `LLMProvider` (`ai/providers.py`):
+Anthropic (default), OpenAI, Google Gemini, Ollama (local), or any OpenAI-compatible
+endpoint. Providers implement only `complete`/`stream` over a normalised message format;
+structured output (`parse`) is implemented once in the client via JSON-schema prompting, and
+the chat assistant uses a portable retrieve-then-answer pattern — so every feature behaves
+identically across providers. Selection is via `LSTM_FORECAST_AI__PROVIDER`. Every caller
+checks `client.available` and falls back to deterministic behaviour when no provider is
+configured, so the system is never blocked on the LLM.
+
+### Model persistence
+`Forecaster.save()` serialises the fitted ensemble weights, the fitted transformer, the
+spec, and the calibration residuals; `Forecaster.load()` + `forecast_future()` reproduce
+forecasts with no retraining — used to avoid retraining on every API request.

@@ -32,7 +32,7 @@ It keeps the article's five capabilities and upgrades each one:
 …and adds three things the article never had:
 
 - 🔎 **Retrieval-augmented forecasting (RAG)** — index historical *analog* windows and condition the model on "what happened after shapes like the recent past".
-- 🤖 **Claude AI layer** — natural-language forecast insights, a RAG **chat assistant** grounded in your docs + run results, and **LLM-assisted hyperparameter tuning** (Claude proposes, cross-validation decides).
+- 🤖 **Provider-agnostic AI layer** — natural-language forecast insights, a RAG **chat assistant** grounded in your docs + run results, and **LLM-assisted hyperparameter tuning** (the LLM proposes, cross-validation decides). Use **any model**: Claude (default), OpenAI, Gemini, local **Ollama**, or any OpenAI-compatible endpoint.
 - 📊 **Honest benchmarking** — every run is scored against Naive / Drift / Seasonal-Naive / ARIMA / ETS baselines on a held-out test set, with a **Diebold–Mariano significance test** vs naive, so "it beats the baselines" is *statistically measured*, not asserted.
 - 🎛️ **Cross-validated tuning + ensembling** — the AI-proposed grid is evaluated by walk-forward CV (`Forecaster.tune`), and forecasts can average a multi-seed **ensemble** for robustness.
 
@@ -159,6 +159,39 @@ print(generate_insights(result, label="AAPL"))      # NL narrative (template if 
 print(suggest_tuning(f.y).candidates)               # structured candidate grid to CV
 ```
 
+### Use any LLM provider
+
+The AI layer is provider-agnostic — pick one via environment variables (no code change):
+
+```bash
+# Claude (default)
+export LSTM_FORECAST_AI__PROVIDER=anthropic   ANTHROPIC_API_KEY=sk-ant-...
+# OpenAI / OpenAI-compatible (OpenRouter, Together, Groq, vLLM)
+export LSTM_FORECAST_AI__PROVIDER=openai       OPENAI_API_KEY=sk-...
+# Google Gemini
+export LSTM_FORECAST_AI__PROVIDER=google       GOOGLE_API_KEY=...
+# Local Ollama (no key)
+export LSTM_FORECAST_AI__PROVIDER=ollama       LSTM_FORECAST_AI__MODEL=llama3.1
+```
+
+Install the matching extra: `pip install -e ".[ai]"` (Claude), `".[ai-openai]"` (OpenAI/Ollama/compatible), `".[ai-google]"` (Gemini), or `".[ai-all]"`.
+
+### Cross-validated tuning, ensembling & persistence
+
+```python
+from lstm_forecast import Forecaster
+from lstm_forecast.forecasting.forecaster import ModelSpec
+from lstm_forecast.forecasting.tuning import specs_from_suggestion
+
+specs = specs_from_suggestion(suggest_tuning(f.y))      # LLM proposes a grid
+report = f.tune(specs, k=3)                              # walk-forward CV picks the winner
+result = f.fit_predict(ModelSpec(lags=21, ensemble=3))  # average a 3-model ensemble
+
+f.save("artifacts/aapl.pt")                             # persist the fitted ensemble
+later = Forecaster.load("artifacts/aapl.pt")
+later.forecast_future()                                 # forecast again — no retraining
+```
+
 ---
 
 ## CLI
@@ -239,9 +272,11 @@ All settings are optional and read from the environment (prefix `LSTM_FORECAST_`
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | _(empty)_ | Enables Claude insights / chat / tuning. Empty → graceful template fallbacks. |
-| `LSTM_FORECAST_AI__MODEL` | `claude-opus-4-8` | Claude model id for the AI layer. |
-| `LSTM_FORECAST_AI__EFFORT` | `high` | Reasoning effort: `low \| medium \| high \| max`. |
+| `LSTM_FORECAST_AI__PROVIDER` | `anthropic` | LLM provider: `anthropic \| openai \| google \| ollama \| openai_compatible`. |
+| `LSTM_FORECAST_AI__API_KEY` | _(empty)_ | Provider API key. `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY` are also auto-detected. Empty → graceful fallbacks (and not required for `ollama`). |
+| `LSTM_FORECAST_AI__MODEL` | _(provider default)_ | Model id, e.g. `claude-opus-4-8`, `gpt-4o`, `gemini-1.5-pro`, `llama3.1`. |
+| `LSTM_FORECAST_AI__BASE_URL` | _(empty)_ | Endpoint for `openai_compatible` / `ollama` (e.g. `http://localhost:11434/v1`). |
+| `LSTM_FORECAST_AI__EFFORT` | `high` | Reasoning effort (Anthropic): `low \| medium \| high \| max`. |
 | `LSTM_FORECAST_DEVICE` | `auto` | torch device: `auto \| cpu \| cuda \| mps`. |
 | `LSTM_FORECAST_SEED` | `20` | Global RNG seed (Python / NumPy / torch). |
 | `LSTM_FORECAST_CACHE_DIR` | `.cache` | Where data downloads & artifacts are cached. |

@@ -55,15 +55,31 @@ def test_chat_assistant_fallback(prices):
     assert "conformal" in answer.lower()
 
 
-def test_generate_insights_with_mocked_claude(prices, monkeypatch):
+def test_generate_insights_with_mocked_llm(prices, monkeypatch):
     res = _result(prices)
-    client = AIClient(AISettings(api_key="test-key"))
-    # Force availability and stub the network call.
-    monkeypatch.setattr(client, "_import_ok", True)
-    monkeypatch.setattr(client, "_client", object())
-    monkeypatch.setattr(
-        AIClient, "complete", lambda self, **kw: "Claude says: the series trends up modestly."
-    )
+    client = AIClient(AISettings(api_key="test-key"))  # anthropic SDK installed → available
     assert client.available
+    # Stub the network call at the client boundary (provider-agnostic).
+    monkeypatch.setattr(
+        AIClient, "complete", lambda self, **kw: "LLM says: the series trends up modestly."
+    )
     text = generate_insights(res, label="TEST", client=client)
-    assert "Claude says" in text
+    assert "LLM says" in text
+
+
+def test_provider_selection_openai_and_ollama():
+    from lstm_forecast.ai.providers import OpenAIProvider, build_provider
+
+    openai_p = build_provider(AISettings(provider="openai", api_key="k"))
+    assert isinstance(openai_p, OpenAIProvider)
+    # Ollama is keyless and OpenAI-compatible; enabled even with no key.
+    ollama = AISettings(provider="ollama", api_key="")
+    assert ollama.enabled is True
+    assert build_provider(ollama).name == "openai"
+
+
+def test_resolved_model_defaults_per_provider():
+    assert AISettings(provider="anthropic").resolved_model == "claude-opus-4-8"
+    assert AISettings(provider="openai").resolved_model == "gpt-4o"
+    assert AISettings(provider="google").resolved_model.startswith("gemini")
+    assert AISettings(provider="openai", model="gpt-4o-mini").resolved_model == "gpt-4o-mini"

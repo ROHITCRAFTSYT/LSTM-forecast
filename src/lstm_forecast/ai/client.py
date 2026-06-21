@@ -1,162 +1,108 @@
-"""Thin wrapper around the Anthropic SDK — the single chokepoint for all Claude calls.
+"""The single chokepoint for all LLM calls — now provider-agnostic.
 
-Centralises model id, adaptive thinking, effort, streaming and structured parsing, and
-exposes a single ``available`` flag so callers can branch to deterministic fallbacks when
-no API key is configured. Per the project's claude-api guidance: default model
-``claude-opus-4-8``, ``thinking={"type": "adaptive"}``, ``output_config.effort``, and
-``messages.parse`` for structured output.
+Delegates ``complete``/``stream`` to the configured provider (Anthropic, OpenAI, Gemini,
+Ollama, or any OpenAI-compatible endpoint) and implements structured output (``parse``)
+generically via JSON-schema prompting so it behaves identically across providers. Callers
+check ``available`` and fall back to deterministic behaviour when no provider is usable.
 """
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Iterator
-from typing import Any, TypeVar
+from typing import TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
+from lstm_forecast.ai.providers import LLMProvider, build_provider
 from lstm_forecast.config import AISettings, get_settings
 
 T = TypeVar("T", bound=BaseModel)
 
 
 class AIUnavailableError(RuntimeError):
-    """Raised when an AI call is attempted but the client is not available."""
+    """Raised when an AI call is attempted but no provider is available."""
+
+
+def _extract_json(text: str) -> dict:
+    """Pull the first JSON object out of a model response (tolerates ``` fences/prose)."""
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    candidate = fenced.group(1) if fenced else None
+    if candidate is None:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            candidate = text[start : end + 1]
+    if candidate is None:
+        raise ValueError("No JSON object found in model response.")
+    return json.loads(candidate)
 
 
 class AIClient:
-    """Lazily-constructed Anthropic client with graceful no-key handling."""
+    """Thin wrapper around an :class:`LLMProvider` with graceful no-key handling."""
 
     def __init__(self, settings: AISettings | None = None) -> None:
         self.settings = settings or get_settings().ai
-        self._client: Any = None
-        self._import_ok = True
-        if self.settings.enabled:
-            try:
-                import anthropic
-
-                self._client = anthropic.Anthropic(
-                    api_key=self.settings.api_key,
-                    timeout=self.settings.request_timeout,
-                )
-            except ImportError:
-                self._import_ok = False
+        self.provider: LLMProvider = build_provider(self.settings)
 
     @property
     def available(self) -> bool:
-        """True when a key is set and the SDK is importable."""
-        return self.settings.enabled and self._import_ok and self._client is not None
+        """True when the configured provider can actually be called."""
+        return self.settings.enabled and self.provider.available
 
-    def _require(self) -> Any:
+    @property
+    def provider_name(self) -> str:
+        return self.provider.name
+
+    def _require(self) -> LLMProvider:
         if not self.available:
             raise AIUnavailableError(
-                "Claude AI is unavailable. Set ANTHROPIC_API_KEY and install the 'ai' extra "
-                "(`pip install lstm-forecast[ai]`)."
+                f"AI provider '{self.settings.provider}' is unavailable. Configure a key "
+                "(or run Ollama locally) and install the matching extra."
             )
-        return self._client
+        return self.provider
 
-    # ------------------------------------------------------------------- calls
-    def complete(
-        self,
-        *,
-        system: str,
-        messages: list[dict[str, Any]],
-        max_tokens: int | None = None,
-        thinking: bool = True,
-    ) -> str:
-        """Non-streaming completion; returns the concatenated text blocks."""
-        client = self._require()
-        kwargs: dict[str, Any] = {
-            "model": self.settings.model,
-            "max_tokens": max_tokens or self.settings.max_tokens,
-            "system": system,
-            "messages": messages,
-            "output_config": {"effort": self.settings.effort},
-        }
-        if thinking:
-            kwargs["thinking"] = {"type": "adaptive"}
-        resp = client.messages.create(**kwargs)
-        return "".join(b.text for b in resp.content if getattr(b, "type", None) == "text")
-
-    def stream(
-        self,
-        *,
-        system: str,
-        messages: list[dict[str, Any]],
-        max_tokens: int | None = None,
-    ) -> Iterator[str]:
-        """Stream text deltas. Recommended for chat/insight responses."""
-        client = self._require()
-        with client.messages.stream(
-            model=self.settings.model,
-            max_tokens=max_tokens or self.settings.max_tokens,
-            system=system,
-            messages=messages,
-            output_config={"effort": self.settings.effort},
-        ) as stream:
-            yield from stream.text_stream
-
-    def parse(
-        self,
-        *,
-        system: str,
-        user: str,
-        schema: type[T],
-        max_tokens: int | None = None,
-    ) -> T:
-        """Structured output validated against a Pydantic ``schema`` via ``messages.parse``."""
-        client = self._require()
-        resp = client.messages.parse(
-            model=self.settings.model,
-            max_tokens=max_tokens or self.settings.max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            output_format=schema,
+    def complete(self, *, system: str, messages: list[dict[str, str]],
+                 max_tokens: int | None = None) -> str:
+        """Non-streaming completion."""
+        return self._require().complete(
+            system=system, messages=messages, max_tokens=max_tokens or self.settings.max_tokens
         )
-        if resp.parsed_output is None:  # pragma: no cover - defensive
-            raise AIUnavailableError("Model did not return a parseable structured output.")
-        return resp.parsed_output
 
-    def tool_loop(
-        self,
-        *,
-        system: str,
-        messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]],
-        dispatch: Any,
-        max_turns: int = 6,
-        max_tokens: int | None = None,
-    ) -> str:
-        """Run a manual tool-use loop. ``dispatch(name, input) -> str`` executes tools."""
-        client = self._require()
-        convo = list(messages)
-        final_text = ""
-        for _ in range(max_turns):
-            resp = client.messages.create(
-                model=self.settings.model,
-                max_tokens=max_tokens or self.settings.max_tokens,
-                system=system,
-                messages=convo,
-                tools=tools,
-                output_config={"effort": self.settings.effort},
+    def stream(self, *, system: str, messages: list[dict[str, str]],
+               max_tokens: int | None = None) -> Iterator[str]:
+        """Stream text deltas (true streaming where the provider supports it)."""
+        yield from self._require().stream(
+            system=system, messages=messages, max_tokens=max_tokens or self.settings.max_tokens
+        )
+
+    def parse(self, *, system: str, user: str, schema: type[T],
+              max_tokens: int | None = None, retries: int = 1) -> T:
+        """Provider-agnostic structured output validated against a Pydantic ``schema``.
+
+        Prompts the model to emit JSON matching the schema, extracts and validates it, and
+        retries once with the validation error fed back if the first attempt is malformed.
+        """
+        provider = self._require()
+        schema_json = json.dumps(schema.model_json_schema())
+        sys_prompt = (
+            f"{system}\n\nReturn ONLY a single JSON object that conforms to this JSON Schema. "
+            f"No prose, no markdown fences.\nJSON Schema:\n{schema_json}"
+        )
+        messages = [{"role": "user", "content": user}]
+        last_err: Exception | None = None
+        for _ in range(retries + 1):
+            text = provider.complete(
+                system=sys_prompt, messages=messages, max_tokens=max_tokens or self.settings.max_tokens
             )
-            text = "".join(
-                b.text for b in resp.content if getattr(b, "type", None) == "text"
-            )
-            if text:
-                final_text = text
-            if resp.stop_reason != "tool_use":
-                break
-            convo.append({"role": "assistant", "content": resp.content})
-            tool_results = []
-            for block in resp.content:
-                if getattr(block, "type", None) == "tool_use":
-                    result = dispatch(block.name, block.input)
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": str(result),
-                        }
-                    )
-            convo.append({"role": "user", "content": tool_results})
-        return final_text
+            try:
+                return schema.model_validate(_extract_json(text))
+            except (ValueError, ValidationError) as exc:
+                last_err = exc
+                messages = [
+                    {"role": "user", "content": user},
+                    {"role": "assistant", "content": text},
+                    {"role": "user", "content": f"That was invalid ({exc}). Return only valid JSON."},
+                ]
+        raise AIUnavailableError(f"Model did not return valid structured output: {last_err}")

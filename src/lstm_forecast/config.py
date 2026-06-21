@@ -13,30 +13,65 @@ from __future__ import annotations
 import functools
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Provider → its default model id, used when LSTM_FORECAST_AI__MODEL is left unset.
+PROVIDER_DEFAULT_MODELS = {
+    "anthropic": "claude-opus-4-8",
+    "openai": "gpt-4o",
+    "google": "gemini-1.5-pro",
+    "ollama": "llama3.1",
+    "openai_compatible": "gpt-4o",
+}
 
 
 class AISettings(BaseSettings):
-    """Configuration for the Claude-powered AI layer."""
+    """Configuration for the (provider-agnostic) AI layer.
+
+    Defaults to Anthropic/Claude, but any provider can be selected via
+    ``LSTM_FORECAST_AI__PROVIDER``: ``anthropic``, ``openai``, ``google`` (Gemini),
+    ``ollama`` (local, no key needed), or ``openai_compatible`` (any OpenAI-style endpoint
+    such as OpenRouter, Together, Groq, vLLM — set ``base_url``). Empty/unavailable config
+    disables AI features and the rest of the system is unaffected.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="LSTM_FORECAST_AI__", extra="ignore", populate_by_name=True
     )
 
+    provider: str = Field(default="anthropic", description="anthropic|openai|google|ollama|openai_compatible")
     api_key: str = Field(
         default="",
-        validation_alias="ANTHROPIC_API_KEY",
-        description="Anthropic API key. Empty disables all AI features (graceful fallback).",
+        # Accept the prefixed name first, then common provider env vars for convenience.
+        validation_alias=AliasChoices(
+            "LSTM_FORECAST_AI__API_KEY",
+            "ANTHROPIC_API_KEY",
+            "OPENAI_API_KEY",
+            "GOOGLE_API_KEY",
+            "GEMINI_API_KEY",
+        ),
+        description="API key for the selected provider. Not required for the 'ollama' provider.",
     )
-    model: str = Field(default="claude-opus-4-8", description="Claude model id.")
-    effort: str = Field(default="high", description="Reasoning effort: low|medium|high|max.")
+    model: str = Field(default="", description="Model id. Empty → provider's default model.")
+    base_url: str = Field(
+        default="",
+        description="Custom endpoint for 'openai_compatible'/'ollama' providers.",
+    )
+    effort: str = Field(default="high", description="Reasoning effort (Anthropic): low|medium|high|max.")
     max_tokens: int = Field(default=4096, ge=1)
     request_timeout: float = Field(default=60.0, gt=0)
 
     @property
+    def resolved_model(self) -> str:
+        """The model id to use, falling back to the provider's default."""
+        return self.model.strip() or PROVIDER_DEFAULT_MODELS.get(self.provider, "")
+
+    @property
     def enabled(self) -> bool:
-        """True when an API key is configured and AI features can be used."""
+        """True when the provider is usable (a key is set, or it's a keyless local provider)."""
+        if self.provider == "ollama":
+            return True  # local server, no key required
         return bool(self.api_key.strip())
 
 

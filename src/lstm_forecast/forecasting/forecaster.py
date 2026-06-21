@@ -18,7 +18,8 @@ Flow on ``fit_predict``:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -146,6 +147,8 @@ class Forecaster:
         self.spec = ModelSpec()
         self.result: ForecastResult | None = None
         self._last_trainers: list[Trainer] | None = None
+        self._saved_residuals: np.ndarray | None = None
+        self._saved_alpha: float = 0.1
 
         if n < self.horizon + self.test_length + self.spec.lags:
             # Not fatal here (spec may change), but warn the caller early via attribute.
@@ -486,6 +489,133 @@ class Forecaster:
             history_dates=self.dates,  # type: ignore[arg-type]
             history_values=self.y,
             alpha=transfer_from.result.alpha if transfer_from.result else 0.1,
+        )
+        return self.result
+
+    # ----------------------------------------------------------------- persistence
+    def save(self, path: str | Path) -> None:
+        """Persist the fitted production model so forecasts need no retraining.
+
+        Saves the ensemble weights, the fitted transformer, the spec, the calibration
+        residuals (for intervals) and the series/exog history. Load with
+        :meth:`Forecaster.load` and call :meth:`forecast_future`. Requires ``fit_predict``.
+        """
+        import torch
+
+        if not self._last_trainers:
+            raise RuntimeError("Call fit_predict before save().")
+        residuals = None
+        alpha = 0.1
+        if self.result is not None and self.result.test_actual is not None:
+            residuals = self.result.test_actual - self.result.test_pred
+            alpha = self.result.alpha
+        models = [
+            {
+                "state_dict": tr.model.state_dict(),
+                "ctor": {
+                    "n_features": tr.model.n_features,
+                    "horizon": tr.model.horizon,
+                    "hidden_size": self.spec.hidden_size,
+                    "num_layers": self.spec.num_layers,
+                    "dropout": self.spec.dropout,
+                    "use_attention": tr.model.use_attention,
+                    "quantiles": tr.model.quantiles,
+                },
+            }
+            for tr in self._last_trainers
+        ]
+        payload = {
+            "format_version": 1,
+            "spec": asdict(self.spec),
+            "name": self.name,
+            "seed": self.seed,
+            "horizon": self.horizon,
+            "test_length": self.test_length,
+            "y": self.y,
+            "exog": self.exog,
+            "exog_names": self.exog_names,
+            "dates": self.dates,
+            "transformer": self.transformer,
+            "retriever": self.retriever,
+            "residuals": residuals,
+            "alpha": alpha,
+            "models": models,
+        }
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        torch.save(payload, path)
+
+    @classmethod
+    def load(cls, path: str | Path, *, device: str = "auto") -> Forecaster:
+        """Load a model saved with :meth:`save`, ready for :meth:`forecast_future`."""
+        import torch
+
+        payload = torch.load(path, map_location="cpu", weights_only=False)
+        exog_df = (
+            pd.DataFrame(payload["exog"], columns=payload["exog_names"])
+            if payload["exog"] is not None
+            else None
+        )
+        f = cls(
+            y=payload["y"],
+            current_dates=payload["dates"],
+            future_dates=payload["horizon"],
+            test_length=payload["test_length"],
+            exog=exog_df,
+            name=payload["name"],
+            seed=payload["seed"],
+            device=device,
+        )
+        f.spec = ModelSpec(**payload["spec"])
+        f.transformer = payload["transformer"]
+        f.reverter = f.transformer.reverter() if f.transformer is not None else None
+        f.retriever = payload["retriever"]
+        f._saved_residuals = payload["residuals"]
+        f._saved_alpha = payload["alpha"]
+
+        trainers: list[Trainer] = []
+        for md in payload["models"]:
+            model = LSTMForecaster(**md["ctor"])
+            model.load_state_dict(md["state_dict"])
+            cfg = TrainerConfig(device=f.device, quantiles=f.spec.quantiles)
+            trainers.append(Trainer(model, cfg))
+        f._last_trainers = trainers
+        return f
+
+    def forecast_future(self, *, alpha: float | None = None) -> ForecastResult:
+        """Produce a future forecast from already-fitted models (no training).
+
+        Works after :meth:`fit_predict` or :meth:`load`. Intervals reuse the stored
+        calibration residuals when available, else a normal-approximation fallback.
+        """
+        if not self._last_trainers:
+            raise RuntimeError("No fitted model; call fit_predict or load first.")
+        n = self.y.size
+        positions = np.arange(n)
+        t_target = (
+            self.transformer.transform(self.y, positions) if self.transformer is not None
+            else self.y
+        )
+        features = self._build_feature_matrix(t_target, self.exog, positions=positions)
+        window = last_input_window(features, lags=self.spec.lags)
+        fut_pos = np.arange(n, n + self.horizon)
+        point = self._predict_horizon(self._last_trainers, window, self.horizon, fut_pos)
+
+        a = alpha if alpha is not None else getattr(self, "_saved_alpha", 0.1)
+        residuals = getattr(self, "_saved_residuals", None)
+        if residuals is not None and len(residuals):
+            lower, upper = conformal_intervals(point, residuals, alpha=a)
+        else:
+            radius = float(np.std(self.y) * 1.64)
+            lower, upper = point - radius, point + radius
+
+        self.result = ForecastResult(
+            point=point,
+            lower=lower,
+            upper=upper,
+            future_dates=self._future_index(self.horizon),
+            history_dates=self.dates,
+            history_values=self.y,
+            alpha=a,
         )
         return self.result
 

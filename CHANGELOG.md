@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format is based on
 ## [0.2.0] - 2026-06-21
 
 ### Added
+- **Provider-agnostic AI layer** — use any LLM, not just Claude: `anthropic`, `openai`,
+  `google` (Gemini), `ollama` (local, no key), or `openai_compatible` (OpenRouter, Together,
+  Groq, vLLM, …). Selected via `LSTM_FORECAST_AI__PROVIDER`; structured output and the chat
+  assistant work uniformly across providers; Anthropic remains the default. New extras
+  `ai-openai`, `ai-google`, `ai-all`.
+- **Model persistence** — `Forecaster.save(path)` / `Forecaster.load(path)` +
+  `forecast_future()` produce forecasts from a saved ensemble with **no retraining**.
 - **Cross-validated tuning** — `Forecaster.tune(specs)` evaluates a candidate grid with
   walk-forward CV and adopts the winner; `forecasting.tuning.specs_from_suggestion` converts
   an AI `TuningSuggestion` into specs, closing the "LLM proposes, data decides" loop.

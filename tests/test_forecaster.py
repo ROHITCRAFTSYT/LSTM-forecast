@@ -99,6 +99,21 @@ def test_significance_vs_naive_present(prices):
     assert "p_value" in dm and "winner" in dm and "significant" in dm
 
 
+def test_save_load_roundtrip_no_retrain(prices, tmp_path):
+    f = Forecaster(y=prices["close"], current_dates=prices.index, future_dates=6, test_length=12)
+    res = f.fit_predict(_fast_spec())
+    path = tmp_path / "model.pt"
+    f.save(path)
+    assert path.exists()
+
+    loaded = Forecaster.load(path)
+    out = loaded.forecast_future()
+    # Reloaded model reproduces the original forecast without retraining.
+    assert out.point.shape == res.point.shape
+    np.testing.assert_allclose(out.point, res.point, rtol=1e-4, atol=1e-3)
+    assert (out.upper >= out.lower).all()
+
+
 def test_result_to_dict_serialisable(prices):
     f = Forecaster(y=prices["close"], current_dates=prices.index, future_dates=4, test_length=8)
     res = f.fit_predict(_fast_spec())

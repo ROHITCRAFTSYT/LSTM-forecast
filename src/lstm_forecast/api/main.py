@@ -32,10 +32,12 @@ def create_app() -> FastAPI:
 
     @app.get("/health", response_model=HealthResponse, tags=["meta"])
     def health() -> HealthResponse:
+        client = AIClient()
         return HealthResponse(
             status="ok",
             version=__version__,
-            ai_enabled=AIClient().available,
+            ai_enabled=client.available,
+            ai_provider=settings.ai.provider,
             device=resolve_device(settings.device),
         )
 
