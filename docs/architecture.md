@@ -69,3 +69,18 @@ configured, so the system is never blocked on the LLM.
 `Forecaster.save()` serialises the fitted ensemble weights, the fitted transformer, the
 spec, and the calibration residuals; `Forecaster.load()` + `forecast_future()` reproduce
 forecasts with no retraining — used to avoid retraining on every API request.
+
+### Async jobs and model caching (API)
+`api/jobs.py` provides a small, dependency-free `JobManager` (a `ThreadPoolExecutor` plus a
+lock-guarded dict). `POST /jobs/forecast` submits a forecast as a background job and returns a
+`job_id`; `GET /jobs/{id}` polls status and returns the result when done. It is in-process and
+single-worker by design — a production deployment would back it with a durable broker (Redis +
+Celery / RQ). Separately, `api/service.py` keeps an in-memory cache of fitted `Forecaster`s
+keyed by a hash of the training-relevant request fields, so repeated identical requests reuse
+the fitted model via `forecast_future()` instead of retraining.
+
+### Calibration metric
+`evaluation.calibration_curve` builds symmetric conformal-style intervals from the calibration
+residuals across a range of nominal levels and reports the empirical coverage at each (plus a
+mean calibration error). The construction is purely causal — the radius depends only on the
+residuals, never on `y_true` — and the dashboard renders it as a reliability plot.

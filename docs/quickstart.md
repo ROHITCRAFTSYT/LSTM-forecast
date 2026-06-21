@@ -61,6 +61,11 @@ streamlit run dashboard/app.py
 docker compose up --build
 ```
 
+Forecasts can run synchronously (`POST /forecast`) or as a background job
+(`POST /jobs/forecast` → `job_id`, then poll `GET /jobs/{id}`); fitted models are cached
+in-process so repeated identical requests skip retraining. The dashboard adds an AI provider
+selector and a calibration (reliability) plot of empirical vs nominal interval coverage.
+
 ## Enable Claude
 
 ```bash

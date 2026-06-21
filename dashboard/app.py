@@ -7,6 +7,8 @@ Consumes the core library in-process — no business logic here, only UI wiring.
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -16,9 +18,13 @@ from lstm_forecast.ai import generate_insights
 from lstm_forecast.ai.assistant import ChatAssistant
 from lstm_forecast.ai.client import AIClient
 from lstm_forecast.ai.doc_index import DocIndex
+from lstm_forecast.config import get_settings
 from lstm_forecast.data import add_finance_features, load_prices
+from lstm_forecast.evaluation import calibration_curve
 from lstm_forecast.forecasting.forecaster import ModelSpec
 from lstm_forecast.transforms import default_finance_transformer
+
+PROVIDERS = ("anthropic", "openai", "google", "ollama", "openai_compatible")
 
 st.set_page_config(page_title="lstm-forecast", page_icon="📈", layout="wide")
 st.title("📈 lstm-forecast — LSTM + RAG + Claude")
@@ -43,8 +49,28 @@ with st.sidebar:
     run_backtest = st.checkbox("Dynamic (backtested) intervals", value=False)
     run = st.button("Run forecast", type="primary")
 
-ai_enabled = AIClient().available
-st.sidebar.markdown(f"**Claude AI:** {'🟢 enabled' if ai_enabled else '⚪ offline (no API key)'}")
+    st.header("AI provider")
+    provider = st.selectbox("Provider", PROVIDERS, index=0)
+    model_id = st.text_input("Model id (optional)", value="")
+    base_url = st.text_input("Base URL (optional)", value="")
+    if st.button("Apply provider"):
+        os.environ["LSTM_FORECAST_AI__PROVIDER"] = provider
+        if model_id.strip():
+            os.environ["LSTM_FORECAST_AI__MODEL"] = model_id.strip()
+        else:
+            os.environ.pop("LSTM_FORECAST_AI__MODEL", None)
+        if base_url.strip():
+            os.environ["LSTM_FORECAST_AI__BASE_URL"] = base_url.strip()
+        else:
+            os.environ.pop("LSTM_FORECAST_AI__BASE_URL", None)
+        get_settings.cache_clear()
+
+_client = AIClient()
+ai_enabled = _client.available
+st.sidebar.markdown(
+    f"**AI provider:** `{_client.provider_name}` — "
+    f"{'🟢 available' if ai_enabled else '⚪ offline (no key / unavailable)'}"
+)
 
 
 def _run_forecast() -> tuple[Forecaster, object]:
@@ -122,6 +148,30 @@ if result is not None:
             st.metric("Interval coverage (test)",
                       f"{result.interval.get('coverage', float('nan')):.2f}",
                       f"nominal {result.interval.get('nominal', 0.9):.2f}")
+
+    st.subheader("🎯 Calibration")
+    if result.test_actual is not None and result.test_pred is not None:
+        residuals = result.test_actual - result.test_pred
+        cal = calibration_curve(result.test_actual, result.test_pred, residuals)
+        cal_df = pd.DataFrame(
+            {"nominal": cal["nominal"], "empirical": cal["empirical"]}
+        )
+        try:
+            import plotly.graph_objects as go
+
+            cfig = go.Figure()
+            cfig.add_scatter(x=cal["nominal"], y=cal["empirical"], mode="lines+markers",
+                             name="empirical", line=dict(color="#1f4e79"))
+            cfig.add_scatter(x=[0, 1], y=[0, 1], mode="lines", name="ideal",
+                             line=dict(color="#7f8c8d", dash="dash"))
+            cfig.update_layout(height=360, margin=dict(l=10, r=10, t=30, b=10),
+                               xaxis_title="nominal coverage", yaxis_title="empirical coverage")
+            st.plotly_chart(cfig, use_container_width=True)
+        except ImportError:
+            st.line_chart(cal_df.set_index("nominal"))
+        st.metric("Calibration error", f"{cal['calibration_error']:.3f}")
+    else:
+        st.caption("Calibration needs a test split (increase test length).")
 
     st.subheader("🤖 AI insights")
     if st.button("Generate insights"):

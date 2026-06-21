@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from lstm_forecast import __version__
 from lstm_forecast.ai.client import AIClient
-from lstm_forecast.api.routes import chat, forecast, transfer
+from lstm_forecast.api.routes import chat, forecast, jobs, transfer
 from lstm_forecast.api.schemas import HealthResponse
 from lstm_forecast.config import get_settings
 from lstm_forecast.utils import resolve_device
@@ -44,6 +44,7 @@ def create_app() -> FastAPI:
     app.include_router(forecast.router)
     app.include_router(chat.router)
     app.include_router(transfer.router)
+    app.include_router(jobs.router)
     return app
 
 

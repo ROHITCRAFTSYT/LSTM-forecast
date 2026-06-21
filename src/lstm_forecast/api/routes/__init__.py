@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from lstm_forecast.api.routes import chat, forecast, transfer
+from lstm_forecast.api.routes import chat, forecast, jobs, transfer
 
-__all__ = ["chat", "forecast", "transfer"]
+__all__ = ["chat", "forecast", "jobs", "transfer"]

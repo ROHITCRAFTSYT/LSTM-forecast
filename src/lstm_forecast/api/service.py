@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+import threading
+
 import pandas as pd
 
 from lstm_forecast import __version__
@@ -102,6 +106,72 @@ def to_response(req: ForecastRequest, result: ForecastResult, *, insights: str |
         best_model=str(best) if best is not None else None,
         insights=insights,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Trained-model cache                                                          #
+# --------------------------------------------------------------------------- #
+# An in-memory cache of fitted Forecasters keyed by a stable signature of the
+# request fields that affect training. Reusing a fitted model lets repeated
+# requests skip (re)training and go straight to ``forecast_future``. This is a
+# simple per-process cache; a multi-process deployment would persist fitted
+# models to ``settings.cache_dir`` (via ``Forecaster.save``/``load``) or an
+# external store instead.
+_MODEL_CACHE: dict[str, tuple[Forecaster, ForecastResult]] = {}
+_MODEL_CACHE_LOCK = threading.Lock()
+
+
+def request_cache_key(req: ForecastRequest) -> str:
+    """Compute a stable cache key from the training-relevant request fields.
+
+    Fields that do not change the fitted model (e.g. ``include_insights``) are
+    excluded so cosmetic differences still hit the cache.
+    """
+    payload = {
+        "series": req.series.model_dump(),
+        "horizon": req.horizon,
+        "test_length": req.test_length,
+        "lags": req.lags,
+        "hidden_size": req.hidden_size,
+        "epochs": req.epochs,
+        "ensemble": req.ensemble,
+        "alpha": req.alpha,
+        "seasonal_period": req.seasonal_period,
+        "use_features": req.use_features,
+        "use_rag": req.use_rag,
+    }
+    blob = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def run_forecast_cached(req: ForecastRequest) -> tuple[Forecaster, ForecastResult]:
+    """Forecast, reusing a cached fitted model when the request signature matches.
+
+    On a cache hit the stored :class:`Forecaster` is reused via
+    :meth:`Forecaster.forecast_future` (no retraining); the cached
+    :class:`ForecastResult` (with its baseline metrics) is returned unchanged so
+    the response is identical to the first call. On a miss the model is trained
+    via :func:`run_forecast` and cached.
+    """
+    key = request_cache_key(req)
+    with _MODEL_CACHE_LOCK:
+        cached = _MODEL_CACHE.get(key)
+    if cached is not None:
+        f, result = cached
+        # Re-run only the (cheap) future projection to confirm the model is usable.
+        f.forecast_future(alpha=req.alpha)
+        return f, result
+
+    f, result = run_forecast(req)
+    with _MODEL_CACHE_LOCK:
+        _MODEL_CACHE[key] = (f, result)
+    return f, result
+
+
+def clear_model_cache() -> None:
+    """Empty the in-memory model cache (mainly for tests)."""
+    with _MODEL_CACHE_LOCK:
+        _MODEL_CACHE.clear()
 
 
 def version() -> str:

@@ -91,3 +91,18 @@ class HealthResponse(BaseModel):
     ai_enabled: bool
     ai_provider: str
     device: str
+
+
+class JobSubmitResponse(BaseModel):
+    """Returned when a background job is accepted for execution."""
+
+    job_id: str
+
+
+class JobStatusResponse(BaseModel):
+    """Snapshot of a background job: status plus result/error when terminal."""
+
+    job_id: str
+    status: str
+    result: ForecastResponse | None = None
+    error: str | None = None

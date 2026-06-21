@@ -23,6 +23,14 @@ All notable changes to this project are documented here. The format is based on
   reports whether the model is *statistically* better than naive (HLN small-sample corrected);
   surfaced in `ForecastResult.significance`, the API response, the CLI, and AI insights.
 - **CLI** — `forecast --tune` (CV the AI grid) and `forecast --ensemble N` flags.
+- **Async forecast jobs** — `POST /jobs/forecast` submits a forecast to an in-process job
+  queue and returns a `job_id`; `GET /jobs/{id}` polls status and returns the result when done.
+- **Trained-model cache** — the API keeps fitted `Forecaster`s in an in-memory cache keyed by
+  the training-relevant request fields, so repeated identical requests skip retraining.
+- **Calibration metric** — `evaluation.calibration_curve` reports empirical vs nominal interval
+  coverage and a mean calibration error; surfaced as a reliability plot in the dashboard.
+- **Dashboard** — AI provider selector (anthropic / openai / google / ollama /
+  openai_compatible) and a calibration (reliability) plot of the forecast intervals.
 
 ### Changed
 - The model's own test metric is now always computed (even with `benchmark=False`), enabling CV.

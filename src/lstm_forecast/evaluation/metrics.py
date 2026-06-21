@@ -117,3 +117,59 @@ def interval_metrics(
         "coverage_gap": cov - nominal,
         "mean_width": mean_interval_width(lower, upper),
     }
+
+
+def calibration_curve(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    residuals: np.ndarray,
+    levels: tuple[float, ...] = (0.5, 0.6, 0.7, 0.8, 0.9, 0.95),
+) -> dict[str, list[float] | float]:
+    """Empirical coverage of symmetric conformal-style intervals across nominal levels.
+
+    For each nominal level ``p`` a symmetric interval ``[y_pred - r, y_pred + r]`` is built,
+    where the radius ``r`` is the finite-sample-corrected ``p (1 + 1/n)`` empirical quantile
+    of the absolute calibration ``residuals`` (the same construction as
+    :func:`lstm_forecast.forecasting.conformal.conformal_quantile`). The empirical coverage
+    is the fraction of ``y_true`` falling within that interval. A well-calibrated model has
+    empirical coverage close to the nominal level (the diagonal ``y = x``).
+
+    The computation is purely causal: the radius depends only on the supplied calibration
+    residuals, never on ``y_true``.
+
+    Parameters
+    ----------
+    y_true : np.ndarray
+        Observed target values.
+    y_pred : np.ndarray
+        Point predictions aligned with ``y_true``.
+    residuals : np.ndarray
+        Calibration residuals (e.g. ``test_actual - test_pred``) used to size intervals.
+        Absolute values are taken internally.
+    levels : tuple of float, optional
+        Nominal coverage levels in ``(0, 1)`` at which to evaluate calibration.
+
+    Returns
+    -------
+    dict
+        Mapping with keys ``'nominal'`` (list of the requested levels), ``'empirical'``
+        (list of empirical coverages, one per level) and ``'calibration_error'`` (float,
+        the mean absolute gap ``|empirical - nominal|`` across levels).
+    """
+    y_true, y_pred = _align(y_true, y_pred)
+    res = np.abs(np.asarray(residuals, dtype=float).ravel())
+    n = res.size
+    if n == 0:
+        raise ValueError("Need at least one calibration residual.")
+
+    nominal: list[float] = []
+    empirical: list[float] = []
+    for p in levels:
+        level = min(1.0, float(p) * (1 + 1 / n))
+        radius = float(np.quantile(res, level, method="higher"))
+        cov = float(np.mean(np.abs(y_true - y_pred) <= radius))
+        nominal.append(float(p))
+        empirical.append(cov)
+
+    error = float(np.mean(np.abs(np.asarray(empirical) - np.asarray(nominal))))
+    return {"nominal": nominal, "empirical": empirical, "calibration_error": error}

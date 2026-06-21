@@ -218,6 +218,8 @@ uvicorn lstm_forecast.api.main:app --port 8000
 | `POST /insights` | run a forecast, return the AI narrative |
 | `POST /chat` | RAG chat grounded in docs + an optional forecast run |
 | `POST /transfer` | train on a source series, forecast a target series |
+| `POST /jobs/forecast` | submit a forecast to run in the background → returns a `job_id` |
+| `GET /jobs/{id}` | poll a background job's status and (when done) its forecast result |
 
 ```bash
 curl -s localhost:8000/forecast -H 'content-type: application/json' -d '{
@@ -225,6 +227,9 @@ curl -s localhost:8000/forecast -H 'content-type: application/json' -d '{
   "horizon": 21, "test_length": 42, "epochs": 40
 }' | jq '.best_model, .metrics'
 ```
+
+Fitted models are kept in an in-process cache keyed by the training-relevant request
+fields, so repeating an identical request skips retraining and reuses the saved model.
 
 ---
 
@@ -234,8 +239,9 @@ curl -s localhost:8000/forecast -H 'content-type: application/json' -d '{
 streamlit run dashboard/app.py
 ```
 
-Pick a ticker, run a forecast, inspect the point path with intervals and the test-set
-benchmark table, and chat with the Claude-powered assistant about the run.
+Pick a ticker and an AI provider, run a forecast, inspect the point path with intervals,
+the test-set benchmark table, and a **calibration (reliability) plot** of empirical vs
+nominal interval coverage, and chat with the AI assistant about the run.
 
 ---
 
@@ -261,6 +267,7 @@ Pass `ANTHROPIC_API_KEY` via your shell or a `.env` file (see `.env.example`).
 6. **LLM-assisted tuning, CV-decided** — Claude proposes a structured candidate grid; **walk-forward cross-validation** (`Forecaster.tune`) picks the winner.
 7. **Ensembling** — average `ensemble=N` differently-seeded models to cut initialisation variance.
 8. **Statistical rigor** — a **Diebold–Mariano test** reports whether the model's accuracy edge over naive is significant, not just numerically lower.
+9. **Calibration check** — a `calibration_curve` metric measures empirical vs nominal interval coverage (and a mean calibration error), so interval *honesty* is quantified, not assumed.
 
 See [`docs/architecture.md`](docs/architecture.md) for details and [`docs/model_card.md`](docs/model_card.md) for scope, limitations and the no-advice disclaimer.
 
