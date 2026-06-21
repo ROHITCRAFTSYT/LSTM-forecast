@@ -38,6 +38,8 @@ Five forecasting capabilities, one consistent API:
 
 > ⚠️ **Not financial advice.** This is a research/engineering framework. Forecasts are uncertain; markets are not guaranteed to be predictable. See the [model card](docs/model_card.md).
 
+> 📖 **Want the deep dive?** [`EXPLAINER.md`](EXPLAINER.md) walks through every component — the model, transforms, conformal intervals, RAG, the AI layer, and the design trade-offs — from the ground up.
+
 ---
 
 ## Contents
