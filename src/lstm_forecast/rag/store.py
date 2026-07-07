@@ -6,7 +6,6 @@ The NumPy fallback keeps RAG fully functional (and tested) without the optional
 
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
 
 import numpy as np
@@ -65,15 +64,20 @@ class AnalogStore:
 
     # ----------------------------------------------------------------- persistence
     def save(self, path: str | Path) -> None:
+        if self._embeddings is None or self._payload is None:
+            raise RuntimeError("AnalogStore is empty; call build() before save().")
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
+        # Persist as a NumPy .npz (arrays only). Avoids pickle, whose loader can
+        # execute arbitrary code when reading a tampered file (CWE-502).
         with path.open("wb") as fh:
-            pickle.dump({"embeddings": self._embeddings, "payload": self._payload}, fh)
+            np.savez(fh, embeddings=self._embeddings, payload=self._payload)
 
     @classmethod
     def load(cls, path: str | Path) -> AnalogStore:
-        with Path(path).open("rb") as fh:
-            data = pickle.load(fh)
-        store = cls()
-        store.build(data["embeddings"], data["payload"])
-        return store
+        # allow_pickle stays False (the default) so only plain arrays are read;
+        # a malicious file cannot trigger code execution on load.
+        with np.load(Path(path), allow_pickle=False) as data:
+            embeddings = data["embeddings"]
+            payload = data["payload"]
+        return cls().build(embeddings, payload)
