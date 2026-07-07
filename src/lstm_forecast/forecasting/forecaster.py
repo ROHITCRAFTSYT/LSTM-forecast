@@ -546,10 +546,19 @@ class Forecaster:
 
     @classmethod
     def load(cls, path: str | Path, *, device: str = "auto") -> Forecaster:
-        """Load a model saved with :meth:`save`, ready for :meth:`forecast_future`."""
+        """Load a model saved with :meth:`save`, ready for :meth:`forecast_future`.
+
+        Security: the checkpoint stores fitted Python objects (transformer,
+        retriever, residual models), so it is deserialized with
+        ``weights_only=False``, which uses pickle and can execute arbitrary code
+        embedded in a malicious file. Only load checkpoints you produced or
+        otherwise trust — never a file from an untrusted source.
+        """
         import torch
 
-        payload = torch.load(path, map_location="cpu", weights_only=False)
+        # weights_only=False is required because the payload is not tensors-only;
+        # see the trust note above.
+        payload = torch.load(path, map_location="cpu", weights_only=False)  # noqa: S614
         exog_df = (
             pd.DataFrame(payload["exog"], columns=payload["exog_names"])
             if payload["exog"] is not None
