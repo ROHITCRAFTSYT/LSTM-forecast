@@ -83,12 +83,30 @@ class APISettings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     cors_origins: str = "*"
+    api_key: str = Field(
+        default="",
+        description="If set, non-public routes require this value in the X-API-Key header.",
+    )
+    rate_limit_per_min: int = Field(
+        default=0,
+        ge=0,
+        description="Per-client request/minute cap (0 disables rate limiting).",
+    )
+    max_request_bytes: int = Field(
+        default=5_000_000,
+        ge=1024,
+        description="Reject request bodies larger than this many bytes (413).",
+    )
 
     @property
     def cors_origin_list(self) -> list[str]:
         if self.cors_origins.strip() == "*":
             return ["*"]
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self.api_key.strip())
 
 
 class Settings(BaseSettings):
@@ -105,6 +123,8 @@ class Settings(BaseSettings):
     cache_dir: Path = Field(default=Path(".cache"))
     device: str = Field(default="auto", description="torch device: auto|cpu|cuda|mps")
     seed: int = Field(default=20)
+    log_level: str = Field(default="INFO", description="Root log level: DEBUG|INFO|WARNING|ERROR.")
+    log_format: str = Field(default="text", description="Log format: text|json.")
 
     ai: AISettings = Field(default_factory=AISettings)
     api: APISettings = Field(default_factory=APISettings)

@@ -97,6 +97,11 @@ class HealthResponse(BaseModel):
     device: str
 
 
+class ReadyResponse(BaseModel):
+    ready: bool
+    checks: dict[str, bool] = Field(default_factory=dict)
+
+
 class JobSubmitResponse(BaseModel):
     """Returned when a background job is accepted for execution."""
 
