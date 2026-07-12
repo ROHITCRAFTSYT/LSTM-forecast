@@ -34,4 +34,17 @@ __all__ = [
     "get_settings",
 ]
 
-__version__ = "0.2.0"
+def _resolve_version() -> str:
+    """Single-source the version from installed package metadata (pyproject is the source).
+
+    Falls back to a sentinel when running from a source tree that isn't installed.
+    """
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("lstm-forecast")
+    except PackageNotFoundError:  # pragma: no cover - only when not installed
+        return "0.0.0+unknown"
+
+
+__version__ = _resolve_version()

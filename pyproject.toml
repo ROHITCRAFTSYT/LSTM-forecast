@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lstm-forecast"
-version = "0.2.0"
+version = "0.3.0"
 description = "Production-grade LSTM time-series forecasting for finance, enhanced with retrieval-augmented forecasting (RAG) and Claude-powered insights."
 readme = "README.md"
 license = { text = "MIT" }
