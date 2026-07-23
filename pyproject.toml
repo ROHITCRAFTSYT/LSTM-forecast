@@ -118,7 +118,12 @@ ignore = [
 "dashboard/*" = ["C408"]
 
 [tool.mypy]
-python_version = "3.10"
+# No python_version pin on purpose: mypy defaults it to the interpreter it runs
+# under, so each CI matrix leg (3.10/3.11/3.12) type-checks against its own
+# version and the 3.10 leg still guards the minimum supported version. Pinning it
+# to "3.10" made mypy reject numpy>=2.5's PEP 695 `type X = ...` stubs (only
+# installed on 3.12, which requires-python >=3.12) with a spurious 3.12-only
+# syntax error. See requires-python and the CI matrix in .github/workflows/ci.yml.
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
