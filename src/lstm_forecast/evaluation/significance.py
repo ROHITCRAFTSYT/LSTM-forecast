@@ -63,8 +63,9 @@ def diebold_mariano(
         raise ValueError(f"error series must match: {ea.shape} vs {eb.shape}")
     n = ea.size
     if n < 4:
-        return DMResult(statistic=float("nan"), p_value=float("nan"), better="tie",
-                        significant=False)
+        return DMResult(
+            statistic=float("nan"), p_value=float("nan"), better="tie", significant=False
+        )
 
     # Loss differential d_t = L(e_a) - L(e_b); positive mean → A worse than B.
     d = np.abs(ea) ** power - np.abs(eb) ** power
@@ -77,8 +78,9 @@ def diebold_mariano(
     gamma0 = autocov(0)
     var_d = gamma0 + 2 * sum(autocov(k) for k in range(1, horizon))
     if var_d <= 0:
-        return DMResult(statistic=float("nan"), p_value=float("nan"), better="tie",
-                        significant=False)
+        return DMResult(
+            statistic=float("nan"), p_value=float("nan"), better="tie", significant=False
+        )
 
     dm = d_mean / np.sqrt(var_d / n)
     # Harvey, Leybourne & Newbold (1997) small-sample correction.

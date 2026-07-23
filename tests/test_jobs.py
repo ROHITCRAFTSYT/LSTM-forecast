@@ -93,7 +93,9 @@ def test_model_cache_is_lru_bounded(monkeypatch):
     def make_req(seed: int) -> ForecastRequest:
         rng = np.random.default_rng(seed)
         values = (np.cumsum(rng.normal(0, 1, size=40)) + 100).tolist()
-        return ForecastRequest(series={"values": values}, horizon=3, test_length=6, lags=5, epochs=3)
+        return ForecastRequest(
+            series={"values": values}, horizon=3, test_length=6, lags=5, epochs=3
+        )
 
     r1, r2, r3 = make_req(1), make_req(2), make_req(3)
     service.run_forecast_cached(r1)
@@ -122,7 +124,9 @@ def test_model_cache_lru_touch_on_hit(monkeypatch):
     def make_req(seed: int) -> ForecastRequest:
         rng = np.random.default_rng(seed)
         values = (np.cumsum(rng.normal(0, 1, size=40)) + 100).tolist()
-        return ForecastRequest(series={"values": values}, horizon=3, test_length=6, lags=5, epochs=3)
+        return ForecastRequest(
+            series={"values": values}, horizon=3, test_length=6, lags=5, epochs=3
+        )
 
     r1, r2, r3 = make_req(1), make_req(2), make_req(3)
     service.run_forecast_cached(r1)

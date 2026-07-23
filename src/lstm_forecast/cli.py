@@ -40,8 +40,10 @@ def _cmd_forecast(args: argparse.Namespace) -> int:
         specs = specs_from_suggestion(suggest_tuning(f.y), base=spec)
         report = f.tune(specs, k=2)
         spec = f.spec  # tune() adopts the best candidate on the forecaster
-        print(f"  best: lags={spec.lags} hidden={spec.hidden_size} "
-              f"layers={spec.num_layers} (CV RMSE={report['best_cv_rmse']})")
+        print(
+            f"  best: lags={spec.lags} hidden={spec.hidden_size} "
+            f"layers={spec.num_layers} (CV RMSE={report['best_cv_rmse']})"
+        )
 
     result = f.fit_predict(spec, alpha=args.alpha)
 
@@ -50,11 +52,14 @@ def _cmd_forecast(args: argparse.Namespace) -> int:
     dm = result.significance.get("vs_naive")
     if isinstance(dm, dict):
         sig = "significant" if dm.get("significant") else "not significant"
-        print(f"\nDiebold-Mariano vs naive: winner={dm.get('winner')}, "
-              f"p={dm.get('p_value'):.3f} ({sig} at 5%)")
+        print(
+            f"\nDiebold-Mariano vs naive: winner={dm.get('winner')}, "
+            f"p={dm.get('p_value'):.3f} ({sig} at 5%)"
+        )
     print(f"\n=== {args.horizon}-step forecast ===")
-    for d, p, lo, hi in zip(result.future_dates, result.point, result.lower, result.upper,
-                            strict=False):
+    for d, p, lo, hi in zip(
+        result.future_dates, result.point, result.lower, result.upper, strict=False
+    ):
         print(f"  {str(d)[:10]}  {p:10.4f}  [{lo:10.4f}, {hi:10.4f}]")
 
     if args.insights:
@@ -96,15 +101,21 @@ def build_parser() -> argparse.ArgumentParser:
     fc.add_argument("--lags", type=int, default=21)
     fc.add_argument("--epochs", type=int, default=60)
     fc.add_argument("--ensemble", type=int, default=1, help="Number of seeded models to average.")
-    fc.add_argument("--tune", action="store_true",
-                    help="Cross-validate AI-suggested hyperparameters before forecasting.")
+    fc.add_argument(
+        "--tune",
+        action="store_true",
+        help="Cross-validate AI-suggested hyperparameters before forecasting.",
+    )
     fc.add_argument("--alpha", type=float, default=0.1)
     fc.add_argument("--seasonal-period", type=int, default=5)
     fc.add_argument("--features", action="store_true", help="Add finance features (multivariate).")
     fc.add_argument("--insights", action="store_true", help="Generate AI insights.")
     fc.add_argument("--plot", nargs="?", const=True, default=False, help="Save a forecast plot.")
-    fc.add_argument("--allow-synthetic", action="store_true",
-                    help="Fall back to synthetic data if the provider is unavailable.")
+    fc.add_argument(
+        "--allow-synthetic",
+        action="store_true",
+        help="Fall back to synthetic data if the provider is unavailable.",
+    )
     fc.set_defaults(func=_cmd_forecast)
 
     sv = sub.add_parser("serve", help="Launch the FastAPI service.")

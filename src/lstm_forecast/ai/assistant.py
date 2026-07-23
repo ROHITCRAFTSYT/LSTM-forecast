@@ -39,12 +39,15 @@ class ChatAssistant:
             return ""
         parts = ["Current forecast run:"]
         if self.result.metrics:
-            parts.append("Test-set metrics (RMSE-sorted):\n" + self.result.metrics_frame().to_string())
+            parts.append(
+                "Test-set metrics (RMSE-sorted):\n" + self.result.metrics_frame().to_string()
+            )
         if self.result.significance.get("vs_naive"):
-            parts.append("Significance vs naive: " + json.dumps(self.result.significance["vs_naive"]))
+            parts.append(
+                "Significance vs naive: " + json.dumps(self.result.significance["vs_naive"])
+            )
         parts.append(
-            "Forecast point path: "
-            + json.dumps([round(v, 4) for v in self.result.point.tolist()])
+            "Forecast point path: " + json.dumps([round(v, 4) for v in self.result.point.tolist()])
         )
         return "\n".join(parts)
 
@@ -64,7 +67,9 @@ class ChatAssistant:
             return self._fallback(question, context)
         user = f"Context:\n{context}\n\nQuestion: {question}"
         try:
-            return self.client.complete(system=_SYSTEM, messages=[{"role": "user", "content": user}])
+            return self.client.complete(
+                system=_SYSTEM, messages=[{"role": "user", "content": user}]
+            )
         except Exception:
             return self._fallback(question, context)
 

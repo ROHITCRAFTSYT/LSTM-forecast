@@ -63,22 +63,31 @@ class AIClient:
             )
         return self.provider
 
-    def complete(self, *, system: str, messages: list[dict[str, str]],
-                 max_tokens: int | None = None) -> str:
+    def complete(
+        self, *, system: str, messages: list[dict[str, str]], max_tokens: int | None = None
+    ) -> str:
         """Non-streaming completion."""
         return self._require().complete(
             system=system, messages=messages, max_tokens=max_tokens or self.settings.max_tokens
         )
 
-    def stream(self, *, system: str, messages: list[dict[str, str]],
-               max_tokens: int | None = None) -> Iterator[str]:
+    def stream(
+        self, *, system: str, messages: list[dict[str, str]], max_tokens: int | None = None
+    ) -> Iterator[str]:
         """Stream text deltas (true streaming where the provider supports it)."""
         yield from self._require().stream(
             system=system, messages=messages, max_tokens=max_tokens or self.settings.max_tokens
         )
 
-    def parse(self, *, system: str, user: str, schema: type[T],
-              max_tokens: int | None = None, retries: int = 1) -> T:
+    def parse(
+        self,
+        *,
+        system: str,
+        user: str,
+        schema: type[T],
+        max_tokens: int | None = None,
+        retries: int = 1,
+    ) -> T:
         """Provider-agnostic structured output validated against a Pydantic ``schema``.
 
         Prompts the model to emit JSON matching the schema, extracts and validates it, and
@@ -94,7 +103,9 @@ class AIClient:
         last_err: Exception | None = None
         for _ in range(retries + 1):
             text = provider.complete(
-                system=sys_prompt, messages=messages, max_tokens=max_tokens or self.settings.max_tokens
+                system=sys_prompt,
+                messages=messages,
+                max_tokens=max_tokens or self.settings.max_tokens,
             )
             try:
                 return schema.model_validate(_extract_json(text))
@@ -103,6 +114,9 @@ class AIClient:
                 messages = [
                     {"role": "user", "content": user},
                     {"role": "assistant", "content": text},
-                    {"role": "user", "content": f"That was invalid ({exc}). Return only valid JSON."},
+                    {
+                        "role": "user",
+                        "content": f"That was invalid ({exc}). Return only valid JSON.",
+                    },
                 ]
         raise AIUnavailableError(f"Model did not return valid structured output: {last_err}")

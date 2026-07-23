@@ -157,7 +157,9 @@ class Forecaster:
             self._too_short = False
 
     # ------------------------------------------------------------------ helpers
-    def attach_transformer(self, transformer: Transformer, reverter: Reverter | None = None) -> None:
+    def attach_transformer(
+        self, transformer: Transformer, reverter: Reverter | None = None
+    ) -> None:
         self.transformer = transformer
         self.reverter = reverter or transformer.reverter()
 
@@ -314,10 +316,10 @@ class Forecaster:
                 )
             # Diebold-Mariano: is the model significantly better than naive?
             if "naive" in baseline_preds:
-                dm = diebold_mariano(
-                    test_actual - test_pred, test_actual - baseline_preds["naive"]
-                )
-                verdict = {"a": "model", "b": "naive", "tie": "no significant difference"}[dm.better]
+                dm = diebold_mariano(test_actual - test_pred, test_actual - baseline_preds["naive"])
+                verdict = {"a": "model", "b": "naive", "tie": "no significant difference"}[
+                    dm.better
+                ]
                 significance["vs_naive"] = {**dm.as_dict(), "winner": verdict}
 
         # Residuals on the test window double as the conformal calibration set.
@@ -343,8 +345,11 @@ class Forecaster:
         test_dates = self.dates[split:] if isinstance(self.dates, pd.DatetimeIndex) else None
 
         ivl = (
-            interval_metrics(test_actual, *conformal_intervals(test_pred, test_residuals, alpha),
-                             nominal=1 - alpha)
+            interval_metrics(
+                test_actual,
+                *conformal_intervals(test_pred, test_residuals, alpha),
+                nominal=1 - alpha,
+            )
             if benchmark
             else {}
         )
@@ -404,8 +409,13 @@ class Forecaster:
                 device=self.device,
             )
             results.append(
-                {"lags": spec.lags, "hidden_size": spec.hidden_size,
-                 "num_layers": spec.num_layers, "dropout": spec.dropout, "cv_rmse": score}
+                {
+                    "lags": spec.lags,
+                    "hidden_size": spec.hidden_size,
+                    "num_layers": spec.num_layers,
+                    "dropout": spec.dropout,
+                    "cv_rmse": score,
+                }
             )
             if score < best_score:
                 best_score, best_spec = score, spec
@@ -431,7 +441,11 @@ class Forecaster:
 
         try:
             return backtest(
-                fit_predict_fn, self.y, horizon=self.horizon, n_windows=n_windows, step=max(1, self.horizon // 2)
+                fit_predict_fn,
+                self.y,
+                horizon=self.horizon,
+                n_windows=n_windows,
+                step=max(1, self.horizon // 2),
             )
         finally:
             self.spec.epochs = original_epochs
@@ -592,7 +606,8 @@ class Forecaster:
         n = self.y.size
         positions = np.arange(n)
         t_target = (
-            self.transformer.transform(self.y, positions) if self.transformer is not None
+            self.transformer.transform(self.y, positions)
+            if self.transformer is not None
             else self.y
         )
         features = self._build_feature_matrix(t_target, self.exog, positions=positions)
@@ -631,8 +646,14 @@ class Forecaster:
         ax.plot(r.history_dates, r.history_values, label="history", color="#1f4e79")
         ax.plot(r.future_dates, r.point, label="forecast", color="#c0392b")
         if ci:
-            ax.fill_between(r.future_dates, r.lower, r.upper, color="#c0392b", alpha=0.2,
-                            label=f"{int((1 - r.alpha) * 100)}% interval")
+            ax.fill_between(
+                r.future_dates,
+                r.lower,
+                r.upper,
+                color="#c0392b",
+                alpha=0.2,
+                label=f"{int((1 - r.alpha) * 100)}% interval",
+            )
         if show_test and r.test_dates is not None and r.test_pred is not None:
             ax.plot(r.test_dates, r.test_pred, "--", color="#e67e22", label="test forecast")
         ax.set_title(f"{self.name} forecast")

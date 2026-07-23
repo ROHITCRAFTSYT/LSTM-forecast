@@ -103,8 +103,9 @@ class OpenAIProvider(LLMProvider):
 
     name = "openai"
 
-    def __init__(self, settings: AISettings, *, base_url: str | None = None,
-                 keyless: bool = False) -> None:
+    def __init__(
+        self, settings: AISettings, *, base_url: str | None = None, keyless: bool = False
+    ) -> None:
         super().__init__(settings)
         self._base_url = base_url or (settings.base_url or None)
         self._keyless = keyless
@@ -182,8 +183,7 @@ class GoogleProvider(LLMProvider):
         # Gemini uses role "model" for assistant turns.
         role_map = {"assistant": "model", "user": "user"}
         return [
-            {"role": role_map.get(m["role"], "user"), "parts": [m["content"]]}
-            for m in messages
+            {"role": role_map.get(m["role"], "user"), "parts": [m["content"]]} for m in messages
         ]
 
     def complete(self, *, system: str, messages: list[dict[str, str]], max_tokens: int) -> str:

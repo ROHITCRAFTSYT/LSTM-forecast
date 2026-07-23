@@ -22,7 +22,11 @@ def forecast(req: ForecastRequest) -> ForecastResponse:
         _, result = service.run_forecast(req)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    insights = generate_insights(result, label=req.series.ticker or "series") if req.include_insights else None
+    insights = (
+        generate_insights(result, label=req.series.ticker or "series")
+        if req.include_insights
+        else None
+    )
     return service.to_response(req, result, insights=insights)
 
 
@@ -35,7 +39,11 @@ def backtest(req: BacktestRequest) -> ForecastResponse:
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-    insights = generate_insights(result, label=req.series.ticker or "series") if req.include_insights else None
+    insights = (
+        generate_insights(result, label=req.series.ticker or "series")
+        if req.include_insights
+        else None
+    )
     return service.to_response(req, result, insights=insights)
 
 

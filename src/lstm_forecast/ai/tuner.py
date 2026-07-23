@@ -57,12 +57,23 @@ def _default_suggestion() -> TuningSuggestion:
     return TuningSuggestion(
         recommended_transforms=["detrend", "robust_scale"],
         candidates=[
-            CandidateConfig(lags=21, hidden_size=64, num_layers=1, dropout=0.1,
-                            rationale="balanced default"),
-            CandidateConfig(lags=42, hidden_size=64, num_layers=2, dropout=0.15,
-                            rationale="longer memory, more depth"),
-            CandidateConfig(lags=10, hidden_size=32, num_layers=1, dropout=0.05,
-                            rationale="light model for short/noisy series"),
+            CandidateConfig(
+                lags=21, hidden_size=64, num_layers=1, dropout=0.1, rationale="balanced default"
+            ),
+            CandidateConfig(
+                lags=42,
+                hidden_size=64,
+                num_layers=2,
+                dropout=0.15,
+                rationale="longer memory, more depth",
+            ),
+            CandidateConfig(
+                lags=10,
+                hidden_size=32,
+                num_layers=1,
+                dropout=0.05,
+                rationale="light model for short/noisy series",
+            ),
         ],
         notes="Offline default grid (no ANTHROPIC_API_KEY). Cross-validate these candidates.",
     )

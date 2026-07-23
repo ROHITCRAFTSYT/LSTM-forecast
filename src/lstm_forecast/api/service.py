@@ -27,9 +27,7 @@ def _series_to_frame(series: SeriesInput) -> pd.DataFrame:
     if series.ticker:
         return load_prices(series.ticker, allow_synthetic_fallback=series.allow_synthetic)
     index = (
-        pd.to_datetime(series.dates)
-        if series.dates
-        else pd.RangeIndex(len(series.values or []))
+        pd.to_datetime(series.dates) if series.dates else pd.RangeIndex(len(series.values or []))
     )
     return pd.DataFrame({"close": series.values}, index=index)
 
@@ -89,7 +87,9 @@ def run_forecast(
     return f, result
 
 
-def to_response(req: ForecastRequest, result: ForecastResult, *, insights: str | None) -> ForecastResponse:
+def to_response(
+    req: ForecastRequest, result: ForecastResult, *, insights: str | None
+) -> ForecastResponse:
     points = [
         IntervalPoint(date=str(d)[:10], point=float(p), lower=float(lo), upper=float(hi))
         for d, p, lo, hi in zip(

@@ -112,8 +112,12 @@ class ETSForecaster:
 
     name = "ets"
 
-    def __init__(self, trend: str | None = "add", seasonal: str | None = None,
-                 seasonal_periods: int | None = None) -> None:
+    def __init__(
+        self,
+        trend: str | None = "add",
+        seasonal: str | None = None,
+        seasonal_periods: int | None = None,
+    ) -> None:
         self.trend = trend
         self.seasonal = seasonal
         self.seasonal_periods = seasonal_periods

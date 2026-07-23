@@ -40,7 +40,9 @@ class AISettings(BaseSettings):
         env_prefix="LSTM_FORECAST_AI__", extra="ignore", populate_by_name=True
     )
 
-    provider: str = Field(default="anthropic", description="anthropic|openai|google|ollama|openai_compatible")
+    provider: str = Field(
+        default="anthropic", description="anthropic|openai|google|ollama|openai_compatible"
+    )
     api_key: str = Field(
         default="",
         # Accept the prefixed name first, then common provider env vars for convenience.
@@ -58,7 +60,9 @@ class AISettings(BaseSettings):
         default="",
         description="Custom endpoint for 'openai_compatible'/'ollama' providers.",
     )
-    effort: str = Field(default="high", description="Reasoning effort (Anthropic): low|medium|high|max.")
+    effort: str = Field(
+        default="high", description="Reasoning effort (Anthropic): low|medium|high|max."
+    )
     max_tokens: int = Field(default=4096, ge=1)
     request_timeout: float = Field(default=60.0, gt=0)
 

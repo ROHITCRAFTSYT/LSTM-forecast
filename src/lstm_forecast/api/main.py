@@ -32,8 +32,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level, settings.log_format)
     logger = get_logger("lstm_forecast.api")
-    logger.info("lstm-forecast API v%s starting (device=%s, ai_provider=%s)",
-                __version__, resolve_device(settings.device), settings.ai.provider)
+    logger.info(
+        "lstm-forecast API v%s starting (device=%s, ai_provider=%s)",
+        __version__,
+        resolve_device(settings.device),
+        settings.ai.provider,
+    )
     try:
         yield
     finally:
@@ -118,7 +122,9 @@ def _register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:
-        return envelope(422, "; ".join(e.get("msg", "invalid") for e in exc.errors()) or "Invalid request.")
+        return envelope(
+            422, "; ".join(e.get("msg", "invalid") for e in exc.errors()) or "Invalid request."
+        )
 
     @app.exception_handler(Exception)
     async def _unhandled(_: Request, exc: Exception) -> JSONResponse:

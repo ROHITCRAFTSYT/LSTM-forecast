@@ -39,11 +39,7 @@ class DocIndex:
         """Index text files found under the given files/directories."""
         for p in paths:
             path = Path(p)
-            files = (
-                [path]
-                if path.is_file()
-                else [f for pat in patterns for f in path.rglob(pat)]
-            )
+            files = [path] if path.is_file() else [f for pat in patterns for f in path.rglob(pat)]
             for f in files:
                 try:
                     self.add_text(f.read_text(encoding="utf-8"), source=str(f))

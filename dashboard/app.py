@@ -121,18 +121,37 @@ if result is not None:
 
             hist = pd.Series(result.history_values, index=result.history_dates)
             fig = go.Figure()
-            fig.add_scatter(x=hist.index[-200:], y=hist.values[-200:], name="history",
-                            line=dict(color="#1f4e79"))
-            fig.add_scatter(x=result.future_dates, y=result.point, name="forecast",
-                            line=dict(color="#c0392b"))
-            fig.add_scatter(x=result.future_dates, y=result.upper, name="upper",
-                            line=dict(width=0), showlegend=False)
-            fig.add_scatter(x=result.future_dates, y=result.lower, name="interval",
-                            fill="tonexty", line=dict(width=0),
-                            fillcolor="rgba(192,57,43,0.2)")
+            fig.add_scatter(
+                x=hist.index[-200:],
+                y=hist.values[-200:],
+                name="history",
+                line=dict(color="#1f4e79"),
+            )
+            fig.add_scatter(
+                x=result.future_dates, y=result.point, name="forecast", line=dict(color="#c0392b")
+            )
+            fig.add_scatter(
+                x=result.future_dates,
+                y=result.upper,
+                name="upper",
+                line=dict(width=0),
+                showlegend=False,
+            )
+            fig.add_scatter(
+                x=result.future_dates,
+                y=result.lower,
+                name="interval",
+                fill="tonexty",
+                line=dict(width=0),
+                fillcolor="rgba(192,57,43,0.2)",
+            )
             if result.test_dates is not None and result.test_pred is not None:
-                fig.add_scatter(x=result.test_dates, y=result.test_pred, name="test forecast",
-                                line=dict(color="#e67e22", dash="dash"))
+                fig.add_scatter(
+                    x=result.test_dates,
+                    y=result.test_pred,
+                    name="test forecast",
+                    line=dict(color="#e67e22", dash="dash"),
+                )
             fig.update_layout(height=440, margin=dict(l=10, r=10, t=30, b=10))
             st.plotly_chart(fig, use_container_width=True)
         except ImportError:
@@ -145,27 +164,41 @@ if result is not None:
             st.dataframe(frame.round(4), use_container_width=True)
             st.caption(f"Best model: **{frame.index[0]}** (lowest RMSE)")
         if result.interval:
-            st.metric("Interval coverage (test)",
-                      f"{result.interval.get('coverage', float('nan')):.2f}",
-                      f"nominal {result.interval.get('nominal', 0.9):.2f}")
+            st.metric(
+                "Interval coverage (test)",
+                f"{result.interval.get('coverage', float('nan')):.2f}",
+                f"nominal {result.interval.get('nominal', 0.9):.2f}",
+            )
 
     st.subheader("🎯 Calibration")
     if result.test_actual is not None and result.test_pred is not None:
         residuals = result.test_actual - result.test_pred
         cal = calibration_curve(result.test_actual, result.test_pred, residuals)
-        cal_df = pd.DataFrame(
-            {"nominal": cal["nominal"], "empirical": cal["empirical"]}
-        )
+        cal_df = pd.DataFrame({"nominal": cal["nominal"], "empirical": cal["empirical"]})
         try:
             import plotly.graph_objects as go
 
             cfig = go.Figure()
-            cfig.add_scatter(x=cal["nominal"], y=cal["empirical"], mode="lines+markers",
-                             name="empirical", line=dict(color="#1f4e79"))
-            cfig.add_scatter(x=[0, 1], y=[0, 1], mode="lines", name="ideal",
-                             line=dict(color="#7f8c8d", dash="dash"))
-            cfig.update_layout(height=360, margin=dict(l=10, r=10, t=30, b=10),
-                               xaxis_title="nominal coverage", yaxis_title="empirical coverage")
+            cfig.add_scatter(
+                x=cal["nominal"],
+                y=cal["empirical"],
+                mode="lines+markers",
+                name="empirical",
+                line=dict(color="#1f4e79"),
+            )
+            cfig.add_scatter(
+                x=[0, 1],
+                y=[0, 1],
+                mode="lines",
+                name="ideal",
+                line=dict(color="#7f8c8d", dash="dash"),
+            )
+            cfig.update_layout(
+                height=360,
+                margin=dict(l=10, r=10, t=30, b=10),
+                xaxis_title="nominal coverage",
+                yaxis_title="empirical coverage",
+            )
             st.plotly_chart(cfig, use_container_width=True)
         except ImportError:
             st.line_chart(cal_df.set_index("nominal"))

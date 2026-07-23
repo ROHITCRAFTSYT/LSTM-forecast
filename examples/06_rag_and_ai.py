@@ -43,8 +43,10 @@ def main(ticker: str = "AAPL") -> None:
     specs = specs_from_suggestion(suggestion, base=ModelSpec(epochs=60, ensemble=2))
     report = f.tune(specs, k=2)
     best = report["best_spec"]
-    print(f"Best CV config: lags={best.lags} hidden={best.hidden_size} "
-          f"(CV RMSE={report['best_cv_rmse']:.4f})")
+    print(
+        f"Best CV config: lags={best.lags} hidden={best.hidden_size} "
+        f"(CV RMSE={report['best_cv_rmse']:.4f})"
+    )
 
     result = f.fit_predict(best)
 

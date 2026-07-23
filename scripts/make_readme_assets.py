@@ -54,9 +54,7 @@ def _structured_series(n: int = 500, seed: int = 7) -> pd.Series:
 def main() -> None:
     series = _structured_series()
 
-    f = Forecaster(
-        y=series, current_dates=series.index, future_dates=21, test_length=42
-    )
+    f = Forecaster(y=series, current_dates=series.index, future_dates=21, test_length=42)
     transformer, reverter = default_finance_transformer(seasonal_period=5)
     result = Pipeline(transformer=transformer, reverter=reverter).fit_predict(
         f, lags=21, hidden_size=48, epochs=120, alpha=0.1
@@ -70,14 +68,22 @@ def main() -> None:
     ax.plot(hist_dates, hist_vals, color=PRIMARY, lw=1.6, label="history")
     ax.plot(result.future_dates, result.point, color=ACCENT, lw=2.0, label="forecast")
     ax.fill_between(
-        result.future_dates, result.lower, result.upper, color=ACCENT, alpha=0.18,
+        result.future_dates,
+        result.lower,
+        result.upper,
+        color=ACCENT,
+        alpha=0.18,
         label="90% conformal interval",
     )
     if result.test_dates is not None and result.test_pred is not None:
-        ax.plot(result.test_dates, result.test_pred, "--", color=TEST, lw=1.6,
-                label="test forecast")
-    ax.set_title("LSTM forecast with conformal intervals (structured demo series)",
-                 fontsize=13, weight="bold")
+        ax.plot(
+            result.test_dates, result.test_pred, "--", color=TEST, lw=1.6, label="test forecast"
+        )
+    ax.set_title(
+        "LSTM forecast with conformal intervals (structured demo series)",
+        fontsize=13,
+        weight="bold",
+    )
     ax.set_ylabel("price")
     ax.legend(loc="upper left", framealpha=0.9)
     fig.tight_layout()
@@ -90,8 +96,7 @@ def main() -> None:
     colors = [ACCENT if name == "lstm" else "#95a5a6" for name in rmse.index]
     fig, ax = plt.subplots(figsize=(8, 4.2))
     ax.barh(rmse.index, rmse.to_numpy(), color=colors)
-    ax.set_title("Test-set RMSE: model vs baselines (lower is better)", fontsize=12,
-                 weight="bold")
+    ax.set_title("Test-set RMSE: model vs baselines (lower is better)", fontsize=12, weight="bold")
     ax.set_xlabel("RMSE")
     for i, v in enumerate(rmse.to_numpy()):
         ax.text(v, i, f" {v:.3f}", va="center", fontsize=9)

@@ -20,7 +20,11 @@ class SeriesInput(BaseModel):
     def _check_one_source(self) -> SeriesInput:
         if not self.ticker and not self.values:
             raise ValueError("Provide either 'ticker' or 'values'.")
-        if self.values is not None and self.dates is not None and len(self.values) != len(self.dates):
+        if (
+            self.values is not None
+            and self.dates is not None
+            and len(self.values) != len(self.dates)
+        ):
             raise ValueError("'values' and 'dates' must be the same length.")
         return self
 

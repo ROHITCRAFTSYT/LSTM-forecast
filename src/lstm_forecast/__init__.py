@@ -34,6 +34,7 @@ __all__ = [
     "get_settings",
 ]
 
+
 def _resolve_version() -> str:
     """Single-source the version from installed package metadata (pyproject is the source).
 
