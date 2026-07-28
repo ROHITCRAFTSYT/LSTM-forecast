@@ -200,8 +200,14 @@ later.forecast_future()                                 # forecast again — no 
 
 ```bash
 lstm-forecast forecast AAPL --features --insights --plot --allow-synthetic
+lstm-forecast forecast AAPL --seed 7 --json | jq .metrics   # reproducible, machine-readable
 lstm-forecast serve --port 8000          # launch the API
 ```
+
+`--seed` makes a run reproducible (seeds every RNG); `--json` emits the whole
+result — forecast, conformal interval, and the model-vs-baseline metric table
+(including `dir_acc` and the Theta baseline) — as a single JSON object for
+piping into `jq` or downstream automation.
 
 ---
 

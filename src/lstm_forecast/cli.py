@@ -14,6 +14,11 @@ def _cmd_forecast(args: argparse.Namespace) -> int:
     from lstm_forecast.data import add_finance_features, load_prices
     from lstm_forecast.transforms import default_finance_transformer
 
+    if args.seed is not None:
+        from lstm_forecast.utils import set_seed
+
+        set_seed(args.seed)
+
     df = load_prices(args.ticker, allow_synthetic_fallback=args.allow_synthetic)
     feat = add_finance_features(df, fourier_periods=(5.0,)) if args.features else df
     exog = feat.drop(columns=["close"]) if args.features else None
@@ -46,6 +51,22 @@ def _cmd_forecast(args: argparse.Namespace) -> int:
         )
 
     result = f.fit_predict(spec, alpha=args.alpha)
+
+    if args.json:
+        import json
+
+        payload = {"ticker": args.ticker, **result.to_dict()}
+        if args.insights:
+            payload["insights"] = generate_insights(result, label=args.ticker)
+        print(json.dumps(payload, default=str))
+        if args.plot:
+            import matplotlib.pyplot as plt
+
+            f.plot(ci=True)
+            out = args.plot if isinstance(args.plot, str) else f"{args.ticker}_forecast.png"
+            plt.tight_layout()
+            plt.savefig(out, dpi=120)
+        return 0
 
     print(f"\n=== {args.ticker} — test-set benchmark (RMSE-sorted) ===")
     print(result.metrics_frame().to_string())
@@ -110,6 +131,14 @@ def build_parser() -> argparse.ArgumentParser:
     fc.add_argument("--seasonal-period", type=int, default=5)
     fc.add_argument("--features", action="store_true", help="Add finance features (multivariate).")
     fc.add_argument("--insights", action="store_true", help="Generate AI insights.")
+    fc.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit the result as a single JSON object (for piping/automation).",
+    )
+    fc.add_argument(
+        "--seed", type=int, default=None, help="Seed all RNGs for a reproducible run."
+    )
     fc.add_argument("--plot", nargs="?", const=True, default=False, help="Save a forecast plot.")
     fc.add_argument(
         "--allow-synthetic",
