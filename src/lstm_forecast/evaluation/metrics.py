@@ -107,6 +107,27 @@ def mean_interval_width(lower: np.ndarray, upper: np.ndarray) -> float:
     return float(np.mean(upper - lower))
 
 
+def interval_score(
+    y_true: np.ndarray, lower: np.ndarray, upper: np.ndarray, alpha: float = 0.1
+) -> float:
+    """Mean Winkler interval score for a central ``(1 - alpha)`` interval (lower
+    is better).
+
+    ``width + (2/alpha)·(lower - y)`` when ``y`` falls below the interval,
+    ``width + (2/alpha)·(y - upper)`` when above, and just ``width`` inside. Unlike
+    bare coverage — which a trivially-wide interval maxes out — this is a *proper*
+    scoring rule: it rewards narrow intervals but penalises misses in proportion
+    to how far outside they land, so calibration and sharpness are scored jointly.
+    """
+    y = np.asarray(y_true, dtype=float).ravel()
+    lo = np.asarray(lower, dtype=float).ravel()
+    hi = np.asarray(upper, dtype=float).ravel()
+    width = hi - lo
+    below = (lo - y) * (y < lo)
+    above = (y - hi) * (y > hi)
+    return float(np.mean(width + (2.0 / alpha) * (below + above)))
+
+
 def point_metrics(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -141,6 +162,7 @@ def interval_metrics(
         "nominal": nominal,
         "coverage_gap": cov - nominal,
         "mean_width": mean_interval_width(lower, upper),
+        "interval_score": interval_score(y_true, lower, upper, alpha=1.0 - nominal),
     }
 
 

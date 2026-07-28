@@ -25,7 +25,7 @@ Five forecasting capabilities, one consistent API:
 | --- | --- |
 | Univariate forecasting | PyTorch LSTM **+ attention**, reversible transforms |
 | Multivariate forecasting | exogenous features + engineered finance indicators |
-| Probabilistic forecasting | **split-conformal** intervals with coverage guarantees |
+| Probabilistic forecasting | **split-conformal** intervals with coverage guarantees, scored by the **Winkler interval score** (proper rule: calibration + sharpness) |
 | Dynamic probabilistic | **rolling backtest residual matrix** → horizon-aware intervals |
 | Transfer learning | `transfer_predict` — reuse a fitted model on new/related series |
 
