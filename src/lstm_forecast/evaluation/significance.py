@@ -14,6 +14,60 @@ from scipy import stats
 
 
 @dataclass
+class LjungBoxResult:
+    """Ljung-Box residual autocorrelation test outcome."""
+
+    statistic: float
+    p_value: float
+    lags: int
+    autocorrelated: bool  # True (p < alpha) ⇒ residuals are NOT white noise
+
+    def as_dict(self) -> dict[str, float | int | bool]:
+        return {
+            "statistic": self.statistic,
+            "p_value": self.p_value,
+            "lags": self.lags,
+            "autocorrelated": self.autocorrelated,
+        }
+
+
+def ljung_box(
+    residuals: np.ndarray,
+    lags: int = 10,
+    *,
+    model_dof: int = 0,
+    alpha: float = 0.05,
+) -> LjungBoxResult:
+    """Ljung-Box test for autocorrelation in forecast residuals.
+
+    A well-specified forecaster leaves white-noise residuals; leftover
+    autocorrelation means exploitable temporal structure was missed. Computes
+    ``Q = n(n+2) * sum(rho_k**2 / (n-k))`` over the first ``lags`` sample
+    autocorrelations ``rho_k``, with a chi-square p-value on
+    ``max(1, lags - model_dof)`` degrees of freedom
+    (subtract fitted parameters via ``model_dof``). ``autocorrelated`` is True when
+    ``p < alpha`` — i.e. the white-noise null is rejected.
+    """
+    r = np.asarray(residuals, dtype=float).ravel()
+    n = r.size
+    lags = min(lags, n - 1)
+    if n < 3 or lags < 1:
+        return LjungBoxResult(float("nan"), float("nan"), max(lags, 0), False)
+    r = r - r.mean()
+    denom = float(np.sum(r**2))
+    if denom == 0:  # constant residuals: no autocorrelation to detect
+        return LjungBoxResult(float("nan"), float("nan"), lags, False)
+    q = 0.0
+    for k in range(1, lags + 1):
+        rho_k = float(np.sum(r[k:] * r[:-k]) / denom)
+        q += rho_k**2 / (n - k)
+    q *= n * (n + 2)
+    df = max(1, lags - model_dof)
+    p_value = float(1 - stats.chi2.cdf(q, df=df))
+    return LjungBoxResult(float(q), p_value, lags, bool(p_value < alpha))
+
+
+@dataclass
 class DMResult:
     """Diebold-Mariano test outcome."""
 

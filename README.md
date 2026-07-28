@@ -276,7 +276,7 @@ Pass `ANTHROPIC_API_KEY` via your shell or a `.env` file (see `.env.example`).
 5. **Leakage-safe reversible transforms** — detrend / deseason / robust-scale fit on *train only*, auto-reverted (including at future positions).
 6. **LLM-assisted tuning, CV-decided** — Claude proposes a structured candidate grid; **walk-forward cross-validation** (`Forecaster.tune`) picks the winner.
 7. **Ensembling** — average `ensemble=N` differently-seeded models to cut initialisation variance.
-8. **Statistical rigor** — a **Diebold–Mariano test** reports whether the model's accuracy edge over naive is significant, not just numerically lower.
+8. **Statistical rigor** — a **Diebold–Mariano test** reports whether the model's accuracy edge over naive is significant, not just numerically lower, and a **Ljung–Box test** checks whether the residuals are white noise (leftover autocorrelation = temporal structure the model missed).
 9. **Calibration check** — a `calibration_curve` metric measures empirical vs nominal interval coverage (and a mean calibration error), so interval *honesty* is quantified, not assumed.
 
 See [`docs/architecture.md`](docs/architecture.md) for details and [`docs/model_card.md`](docs/model_card.md) for scope, limitations and the no-advice disclaimer.
