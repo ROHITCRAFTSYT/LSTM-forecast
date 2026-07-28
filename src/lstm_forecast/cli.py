@@ -77,6 +77,10 @@ def _cmd_forecast(args: argparse.Namespace) -> int:
             f"\nDiebold-Mariano vs naive: winner={dm.get('winner')}, "
             f"p={dm.get('p_value'):.3f} ({sig} at 5%)"
         )
+    lb = result.significance.get("residual_ljung_box")
+    if isinstance(lb, dict) and lb.get("p_value") == lb.get("p_value"):  # not NaN
+        verdict = "autocorrelated (structure left)" if lb.get("autocorrelated") else "white noise"
+        print(f"Ljung-Box residuals: p={lb.get('p_value'):.3f} → {verdict}")
     print(f"\n=== {args.horizon}-step forecast ===")
     for d, p, lo, hi in zip(
         result.future_dates, result.point, result.lower, result.upper, strict=False
