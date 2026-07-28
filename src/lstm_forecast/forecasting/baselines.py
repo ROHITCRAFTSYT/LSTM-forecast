@@ -150,6 +150,50 @@ class ETSForecaster:
             return self._fallback.predict(h)
 
 
+class ThetaForecaster:
+    """Theta method (Assimakopoulos & Nikolopoulos) via statsmodels, naive fallback.
+
+    The classic theta=2 model that won the M3 competition: it deseasonalizes, splits
+    the series into theta-lines, extrapolates the long-term component with linear
+    regression and the short-term curvature with simple exponential smoothing, then
+    recombines. A strong, parameter-light benchmark the LSTM must beat to justify its
+    extra complexity — often the hardest of the classical baselines to outperform.
+    """
+
+    name = "theta"
+
+    def __init__(self, season: int = 5, deseasonalize: bool = True) -> None:
+        self.season = season
+        self.deseasonalize = deseasonalize
+        self._fallback = NaiveForecaster()
+        self._result = None
+
+    def fit(self, y: np.ndarray) -> ThetaForecaster:
+        y = np.asarray(y, dtype=float).ravel()
+        self._fallback.fit(y)
+        try:
+            from statsmodels.tsa.forecasting.theta import ThetaModel
+
+            period = self.season if self.season and self.season > 1 else None
+            # Deseasonalization needs at least two full seasons; disable it otherwise
+            # so short series don't raise instead of forecasting.
+            deseason = (
+                self.deseasonalize and period is not None and len(y) >= 2 * period
+            )
+            self._result = ThetaModel(y, period=period, deseasonalize=deseason).fit()
+        except Exception:
+            self._result = None
+        return self
+
+    def predict(self, h: int) -> np.ndarray:
+        if self._result is None:
+            return self._fallback.predict(h)
+        try:
+            return np.asarray(self._result.forecast(h), dtype=float)
+        except Exception:
+            return self._fallback.predict(h)
+
+
 def baseline_registry(season: int = 5) -> dict[str, BaseForecaster]:
     """Return a fresh set of baseline forecasters keyed by name."""
     return {
@@ -158,4 +202,5 @@ def baseline_registry(season: int = 5) -> dict[str, BaseForecaster]:
         "seasonal_naive": SeasonalNaiveForecaster(season=season),
         "arima": ARIMAForecaster(),
         "ets": ETSForecaster(),
+        "theta": ThetaForecaster(season=season),
     }

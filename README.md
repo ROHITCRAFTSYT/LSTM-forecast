@@ -33,7 +33,7 @@ Five forecasting capabilities, one consistent API:
 
 - 🔎 **Retrieval-augmented forecasting (RAG)** — index historical *analog* windows and condition the model on "what happened after shapes like the recent past".
 - 🤖 **Provider-agnostic AI layer** — natural-language forecast insights, a RAG **chat assistant** grounded in your docs + run results, and **LLM-assisted hyperparameter tuning** (the LLM proposes, cross-validation decides). Use **any model**: Claude (default), OpenAI, Gemini, local **Ollama**, or any OpenAI-compatible endpoint.
-- 📊 **Honest benchmarking** — every run is scored against Naive / Drift / Seasonal-Naive / ARIMA / ETS baselines on a held-out test set, with a **Diebold–Mariano significance test** vs naive, so "it beats the baselines" is *statistically measured*, not asserted.
+- 📊 **Honest benchmarking** — every run is scored against Naive / Drift / Seasonal-Naive / ARIMA / ETS / **Theta** baselines on a held-out test set, with a **Diebold–Mariano significance test** vs naive, so "it beats the baselines" is *statistically measured*, not asserted. (Theta — the M3-competition winner — is often the toughest classical benchmark to beat.)
 - 🎛️ **Cross-validated tuning + ensembling** — the AI-proposed grid is evaluated by walk-forward CV (`Forecaster.tune`), and forecasts can average a multi-seed **ensemble** for robustness.
 
 > ⚠️ **Not financial advice.** This is a research/engineering framework. Forecasts are uncertain; markets are not guaranteed to be predictable. See the [model card](docs/model_card.md).

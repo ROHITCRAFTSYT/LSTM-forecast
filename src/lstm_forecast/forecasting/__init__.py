@@ -9,6 +9,7 @@ from lstm_forecast.forecasting.baselines import (
     ETSForecaster,
     NaiveForecaster,
     SeasonalNaiveForecaster,
+    ThetaForecaster,
     baseline_registry,
 )
 from lstm_forecast.forecasting.conformal import conformal_intervals
@@ -25,6 +26,7 @@ __all__ = [
     "ModelSpec",
     "NaiveForecaster",
     "SeasonalNaiveForecaster",
+    "ThetaForecaster",
     "backtest",
     "baseline_registry",
     "conformal_intervals",
