@@ -5,6 +5,7 @@ from __future__ import annotations
 from lstm_forecast.evaluation.metrics import (
     calibration_curve,
     coverage,
+    directional_accuracy,
     interval_metrics,
     mae,
     mape,
@@ -22,6 +23,7 @@ __all__ = [
     "calibration_curve",
     "coverage",
     "diebold_mariano",
+    "directional_accuracy",
     "interval_metrics",
     "mae",
     "mape",

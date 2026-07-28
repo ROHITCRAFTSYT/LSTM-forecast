@@ -63,6 +63,29 @@ def mase(y_true: np.ndarray, y_pred: np.ndarray, y_train: np.ndarray, season: in
     return float(np.mean(np.abs(y_true - y_pred)) / scale)
 
 
+def directional_accuracy(
+    y_true: np.ndarray, y_pred: np.ndarray, last: float | None = None
+) -> float:
+    """Fraction of steps where the forecast gets the *direction* of change right.
+
+    In finance the sign of the next move is often more actionable than its
+    magnitude. When ``last`` (the final in-sample value) is provided, the first
+    forecast step is scored against the move away from ``last`` — the real up/down
+    call — otherwise only step-to-step directions within the horizon are compared.
+    A flat step (no change) matches only another flat step. Returns NaN if there is
+    fewer than one comparable transition.
+    """
+    y_true, y_pred = _align(y_true, y_pred)
+    if last is not None:
+        y_true = np.concatenate(([float(last)], y_true))
+        y_pred = np.concatenate(([float(last)], y_pred))
+    if y_true.size < 2:
+        return float("nan")
+    true_dir = np.sign(np.diff(y_true))
+    pred_dir = np.sign(np.diff(y_pred))
+    return float(np.mean(true_dir == pred_dir))
+
+
 def pinball(y_true: np.ndarray, q_pred: np.ndarray, quantile: float) -> float:
     """Pinball loss for a single quantile forecast."""
     y_true, q_pred = _align(y_true, q_pred)
@@ -98,6 +121,8 @@ def point_metrics(
         "smape": smape(y_true, y_pred),
         "r2": r2(y_true, y_pred),
     }
+    anchor = float(y_train[-1]) if y_train is not None and len(y_train) else None
+    out["dir_acc"] = directional_accuracy(y_true, y_pred, last=anchor)
     if y_train is not None:
         out["mase"] = mase(y_true, y_pred, y_train, season=season)
     return out
