@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from lstm_forecast.evaluation.metrics import (
+    bias,
     calibration_curve,
     coverage,
     directional_accuracy,
@@ -21,6 +22,7 @@ from lstm_forecast.evaluation.significance import DMResult, diebold_mariano
 
 __all__ = [
     "DMResult",
+    "bias",
     "calibration_curve",
     "coverage",
     "diebold_mariano",

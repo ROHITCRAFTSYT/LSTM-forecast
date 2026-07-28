@@ -63,6 +63,19 @@ def mase(y_true: np.ndarray, y_pred: np.ndarray, y_train: np.ndarray, season: in
     return float(np.mean(np.abs(y_true - y_pred)) / scale)
 
 
+def bias(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """Mean forecast error ``mean(y_pred - y_true)`` — the *signed* bias.
+
+    Every other point metric here is magnitude-only (rmse/mae/mape/smape), so a
+    model that is consistently 2% too high scores the same as one that is 2% too
+    low. Bias exposes that direction: positive = over-forecasting, negative =
+    under-forecasting, ~0 = unbiased. Reported alongside ``mae`` it separates a
+    systematic offset (fixable by recentering) from irreducible noise.
+    """
+    y_true, y_pred = _align(y_true, y_pred)
+    return float(np.mean(y_pred - y_true))
+
+
 def directional_accuracy(
     y_true: np.ndarray, y_pred: np.ndarray, last: float | None = None
 ) -> float:
@@ -144,6 +157,7 @@ def point_metrics(
     }
     anchor = float(y_train[-1]) if y_train is not None and len(y_train) else None
     out["dir_acc"] = directional_accuracy(y_true, y_pred, last=anchor)
+    out["bias"] = bias(y_true, y_pred)
     if y_train is not None:
         out["mase"] = mase(y_true, y_pred, y_train, season=season)
     return out
