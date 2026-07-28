@@ -153,6 +153,23 @@ target = Forecaster(y=other_series, future_dates=21, test_length=42)
 target.transfer_predict(transfer_from=f)   # no retraining
 ```
 
+### Metrics reference
+
+Every benchmark row bundles these; point metrics come from `point_metrics`, interval metrics from `interval_metrics`.
+
+| Metric | What it measures |
+| --- | --- |
+| `rmse`, `mae` | Error magnitude (squared / absolute) |
+| `mape`, `smape` | Percentage error (raw / symmetric) |
+| `mase` | Error scaled by the in-sample seasonal-naive error (scale-free) |
+| `r2` | Variance explained |
+| `dir_acc` | **Directional accuracy** — fraction of steps with the right up/down move (anchored on the last known value) |
+| `bias` | **Signed** mean error — positive = over-forecasting, negative = under (magnitude metrics hide this) |
+| `coverage` / `mean_width` | Interval calibration and sharpness |
+| `interval_score` | **Winkler** proper score — calibration + sharpness jointly (lower is better) |
+
+Diagnostics: **Diebold–Mariano** (`diebold_mariano`) for significance vs naive, **Ljung–Box** (`ljung_box`) for residual autocorrelation.
+
 ### AI insights & tuning (needs `ANTHROPIC_API_KEY`)
 
 ```python
