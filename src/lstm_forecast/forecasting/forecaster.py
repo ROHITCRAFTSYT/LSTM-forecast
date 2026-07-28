@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 from lstm_forecast.evaluation.metrics import interval_metrics, point_metrics
-from lstm_forecast.evaluation.significance import diebold_mariano
+from lstm_forecast.evaluation.significance import diebold_mariano, ljung_box
 from lstm_forecast.forecasting.backtest import BacktestResult, backtest, dynamic_intervals
 from lstm_forecast.forecasting.baselines import baseline_registry
 from lstm_forecast.forecasting.conformal import conformal_intervals, conformal_quantile
@@ -306,6 +306,10 @@ class Forecaster:
             )
         }
         significance: dict[str, object] = {}
+        # Always report whether the model left autocorrelation in its residuals
+        # (a well-specified forecaster's residuals should be white noise).
+        lb = ljung_box(test_actual - test_pred, lags=min(10, self.test_length - 1))
+        significance["residual_ljung_box"] = lb.as_dict()
         if benchmark:
             baseline_preds: dict[str, np.ndarray] = {}
             for bname, model in baseline_registry(season=min(5, lags)).items():

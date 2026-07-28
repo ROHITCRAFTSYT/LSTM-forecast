@@ -99,6 +99,14 @@ def test_significance_vs_naive_present(prices):
     assert "p_value" in dm and "winner" in dm and "significant" in dm
 
 
+def test_residual_ljung_box_reported(prices):
+    # The residual white-noise diagnostic is computed on every run, benchmark or not.
+    f = Forecaster(y=prices["close"], current_dates=prices.index, future_dates=6, test_length=15)
+    res = f.fit_predict(_fast_spec(), benchmark=False)
+    lb = res.significance["residual_ljung_box"]
+    assert {"statistic", "p_value", "lags", "autocorrelated"} <= set(lb)
+
+
 def test_save_load_roundtrip_no_retrain(prices, tmp_path):
     f = Forecaster(y=prices["close"], current_dates=prices.index, future_dates=6, test_length=12)
     res = f.fit_predict(_fast_spec())
