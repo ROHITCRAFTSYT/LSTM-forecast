@@ -238,6 +238,7 @@ uvicorn lstm_forecast.api.main:app --port 8000
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /health` | liveness + whether AI is enabled + device |
+| `GET /ready` | readiness probe — torch imports + device resolves, for orchestration |
 | `POST /forecast` | forecast + conformal intervals + baseline metrics |
 | `POST /backtest` | forecast + dynamic (backtested) intervals |
 | `POST /insights` | run a forecast, return the AI narrative |
