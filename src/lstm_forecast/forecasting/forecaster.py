@@ -576,7 +576,7 @@ class Forecaster:
 
         # weights_only=False is required because the payload is not tensors-only;
         # see the trust note above.
-        payload = torch.load(path, map_location="cpu", weights_only=False)  # noqa: S614
+        payload = torch.load(path, map_location="cpu", weights_only=False)
         exog_df = (
             pd.DataFrame(payload["exog"], columns=payload["exog_names"])
             if payload["exog"] is not None
